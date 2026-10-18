@@ -10,8 +10,8 @@ declare global {
   var __linkpulse_db: DatabaseSync | undefined;
 }
 
-const DB_DIR = path.join(process.cwd(), 'data');
-const DB_PATH = path.join(DB_DIR, 'linkpulse.db');
+const DB_DIR = process.env.DB_DIR || (process.env.VERCEL ? path.join('/tmp', 'data') : path.join(process.cwd(), 'data'));
+const DB_PATH = process.env.DB_PATH || path.join(DB_DIR, 'linkpulse.db');
 
 export function getDatabase(): DatabaseSync {
   if (global.__linkpulse_db) {
