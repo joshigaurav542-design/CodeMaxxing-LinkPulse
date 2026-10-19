@@ -26,21 +26,31 @@ export default function LinksTable({
   const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const handleCopy = (link: Link) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-    const code = link.customAlias || link.shortCode;
-    const url = `${origin}/${code}`;
-    navigator.clipboard.writeText(url);
+  
+const handleCopy = async (link: Link) => {
+  const origin = window.location.origin;
+  const code = link.customAlias || link.shortCode;
+  const url = `${origin}/${code}`;
+
+  try {
+    await navigator.clipboard.writeText(url);
     setCopiedId(link.id);
     setTimeout(() => setCopiedId(null), 2000);
-  };
+  } catch (error) {
+    console.error('Failed to copy short URL:', error);
+    alert('Could not copy the link. Please try again.');
+  }
+};
+
 
   const filteredLinks = links.filter((link) => {
-    const matchesSearch =
-      link.shortCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (link.customAlias && link.customAlias.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      link.destinationUrl.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (link.title && link.title.toLowerCase().includes(searchTerm.toLowerCase()));
+    const search = searchTerm.toLowerCase();
+
+const matchesSearch =
+  (link.shortCode ?? '').toLowerCase().includes(search) ||
+  (link.customAlias ?? '').toLowerCase().includes(search) ||
+  (link.destinationUrl ?? '').toLowerCase().includes(search) ||
+  (link.title ?? '').toLowerCase().includes(search);
 
     const matchesCampaign = selectedCampaign === 'all' || link.campaignId === selectedCampaign;
 
