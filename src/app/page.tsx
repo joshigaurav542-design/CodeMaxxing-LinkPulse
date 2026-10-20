@@ -5,9 +5,8 @@ import {
   Link2, Plus, UploadCloud, BarChart3, ShieldCheck,
   Layers, Zap, Activity, Clock, LogIn, LogOut,
   Globe, ShieldAlert, AlertCircle, Info, Lock,
-  Sparkles, ArrowRight
+  Sparkles, ArrowRight, ArrowLeft
 } from 'lucide-react';
-import LinksTable from '@/components/LinksTable';
 import CreateLinkModal from '@/components/CreateLinkModal';
 import CsvBulkUploadModal from '@/components/CsvBulkUploadModal';
 import QrCodeModal from '@/components/QrCodeModal';
@@ -20,7 +19,7 @@ import { Link, Campaign, Role, LinkHub } from '@/lib/types';
 import { logSupabaseActivity } from '@/lib/supabaseClient';
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<'hubs' | 'links' | 'activity' | 'governance'>('hubs');
+  const [currentView, setCurrentView] = useState<'hubs' | 'profile' | 'governance'>('hubs');
   const [links, setLinks] = useState<Link[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [hubs, setHubs] = useState<LinkHub[]>([]);
@@ -79,7 +78,7 @@ export default function DashboardPage() {
     localStorage.removeItem('linkpulse_user');
     setUser(null);
     setActiveRole('VISITOR');
-    setActiveTab('hubs');
+    setCurrentView('hubs');
     setLinks([]);
   };
 
@@ -89,7 +88,7 @@ export default function DashboardPage() {
     try {
       localStorage.setItem('linkpulse_user', JSON.stringify(selectedUser));
     } catch {}
-    setActiveTab('hubs');
+    setCurrentView('hubs');
   };
 
   const handleRoleChange = (newRole: Role) => {
@@ -98,7 +97,7 @@ export default function DashboardPage() {
       localStorage.removeItem('linkpulse_user');
       setUser(null);
       setLinks([]);
-      setActiveTab('hubs');
+      setCurrentView('hubs');
     } else if (newRole === 'USER') {
       const u = {
         id: 'usr-marketer-002',
@@ -110,8 +109,8 @@ export default function DashboardPage() {
       try {
         localStorage.setItem('linkpulse_user', JSON.stringify(u));
       } catch {}
-      if (activeTab === 'governance') {
-        setActiveTab('hubs');
+      if (currentView === 'governance') {
+        setCurrentView('hubs');
       }
     } else if (newRole === 'ADMIN') {
       const u = {
@@ -248,16 +247,17 @@ export default function DashboardPage() {
     setIsCsvOpen(true);
   };
 
-  const totalClicksAcrossLinks = links.reduce((acc, l) => acc + (l.clickCount || 0), 0);
-
   return (
     <div className="min-h-screen flex flex-col font-sans">
       {/* Navigation Header */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center shadow-xs">
+          {/* Logo & Brand (Click to Return Home) */}
+          <button
+            onClick={() => setCurrentView('hubs')}
+            className="flex items-center gap-3 text-left cursor-pointer group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
               <Zap className="w-4 h-4 fill-white" />
             </div>
             <div>
@@ -269,7 +269,7 @@ export default function DashboardPage() {
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">Micro-Redirection & Collaboration Engine</p>
             </div>
-          </div>
+          </button>
 
           {/* Action Buttons, RBAC Badge & Theme Switcher */}
           <div className="flex items-center gap-2">
@@ -291,29 +291,56 @@ export default function DashboardPage() {
               Create Link
             </button>
 
-            {user ? (
-              <div className="flex items-center gap-1.5 pl-1 border-l border-slate-200 dark:border-slate-800">
-                <div
-                  className="w-7 h-7 rounded-xl bg-slate-900 dark:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center uppercase shadow-2xs"
-                  title={`${user.name} (${user.email})`}
-                >
-                  {user.name?.charAt(0) || 'U'}
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  title="Sign Out"
-                  className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
+            {/* Top Right "Your Profile" Tab Button */}
+            <button
+              onClick={() => setCurrentView(currentView === 'profile' ? 'hubs' : 'profile')}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border shadow-2xs ${
+                currentView === 'profile'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-500/20 shadow-xs'
+                  : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800'
+              }`}
+              title="View Your Profile & Activity"
+            >
+              <div
+                className={`w-5 h-5 rounded-lg text-[10px] font-bold flex items-center justify-center uppercase shrink-0 ${
+                  currentView === 'profile'
+                    ? 'bg-white text-indigo-600'
+                    : 'bg-indigo-600 text-white'
+                }`}
+              >
+                {user?.name?.charAt(0) || 'U'}
               </div>
+              <span className="hidden sm:inline">Your Profile</span>
+              <span
+                className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
+                  currentView === 'profile'
+                    ? 'bg-indigo-700 text-white'
+                    : activeRole === 'ADMIN'
+                    ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300'
+                    : activeRole === 'USER'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
+                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                }`}
+              >
+                {activeRole}
+              </span>
+            </button>
+
+            {user ? (
+              <button
+                onClick={handleSignOut}
+                title="Sign Out"
+                className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             ) : (
               <a
                 href="/login"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-black dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold shadow-xs transition-all cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5" />
-                Sign In
+                <span className="hidden sm:inline">Sign In</span>
               </a>
             )}
           </div>
@@ -463,122 +490,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Minimal Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
-              <span className="text-xs font-medium">Link Hubs</span>
-              <Layers className="w-3.5 h-3.5 text-indigo-500" />
-            </div>
-            <div className="text-base font-semibold text-slate-900 dark:text-white">
-              {hubs.length} Hubs
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Admin-controlled hubs</p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
-              <span className="text-xs font-medium">Active Links</span>
-              <Link2 className="w-3.5 h-3.5 text-blue-500" />
-            </div>
-            <div className="text-base font-semibold text-slate-900 dark:text-white">
-              {links.length} Links
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">High-speed routes</p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
-              <span className="text-xs font-medium">Tracked Traffic</span>
-              <BarChart3 className="w-3.5 h-3.5 text-emerald-500" />
-            </div>
-            <div className="text-base font-semibold text-slate-900 dark:text-white">
-              {totalClicksAcrossLinks.toLocaleString()}
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              {activeRole === 'USER' ? 'Clicks on your links' : 'Total redirects'}
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
-              <span className="text-xs font-medium">Active Session</span>
-              <button
-                onClick={() => setIsRoleModalOpen(true)}
-                className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-              >
-                Change
-              </button>
-            </div>
-            <div className="text-base font-semibold text-slate-900 dark:text-white truncate">
-              {activeRole === 'VISITOR' || !user ? 'Guest Visitor' : user.name}
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 capitalize flex items-center gap-1.5">
-              <span>Role: {activeRole.toLowerCase()}</span>
-              {activeRole === 'VISITOR' && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300 font-semibold">
-                  View Only
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-
-        {/* Navigation Tabs Bar */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-900/80 rounded-xl max-w-full overflow-x-auto custom-scrollbar border border-slate-200/80 dark:border-slate-800 shrink-0">
-          <button
-            onClick={() => setActiveTab('hubs')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
-              activeTab === 'hubs'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5 text-indigo-500" />
-            Link Hubs ({hubs.length})
-          </button>
-
-          <button
-            onClick={() => setActiveTab('links')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
-              activeTab === 'links'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Link2 className="w-3.5 h-3.5" />
-            All Links ({links.length})
-          </button>
-
-          <button
-            onClick={() => setActiveTab('activity')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
-              activeTab === 'activity'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5 text-emerald-500" />
-            Your Activity
-          </button>
-
-          {activeRole === 'ADMIN' && (
-            <button
-              onClick={() => setActiveTab('governance')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
-                activeTab === 'governance'
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-              Governance
-            </button>
-          )}
-        </div>
-
-        {/* TAB 0: LINK HUBS (Primary Default View) */}
-        {activeTab === 'hubs' && (
+        {/* VIEW 1: LINK HUBS (Primary Home Page View) */}
+        {currentView === 'hubs' && (
           <LinkHubsView
             currentUser={user}
             onOpenCreateLinkModal={(hubId) => handleOpenCreateModal(hubId)}
@@ -586,82 +499,159 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* TAB 1: ALL LINKS */}
-        {activeTab === 'links' && (
-          <div className="space-y-5">
-            {campaigns.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {campaigns.map((camp) => (
-                  <div
-                    key={camp.id}
-                    className="p-3.5 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+        {/* VIEW 2: YOUR PROFILE (Profile Overview & Personal Activity Log) */}
+        {currentView === 'profile' && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* Profile Navigation Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCurrentView('hubs')}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition cursor-pointer shadow-2xs"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Link Hubs</span>
+                </button>
+                <div>
+                  <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    Your Profile
+                  </h1>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Account identity, role credentials, and personal activity log
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsRoleModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition cursor-pointer shadow-2xs"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
+                  Switch Role
+                </button>
+
+                {activeRole === 'ADMIN' && (
+                  <button
+                    onClick={() => setCurrentView('governance')}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition cursor-pointer shadow-2xs"
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span
-                        className="px-2 py-0.5 rounded-md text-[11px] font-medium"
-                        style={{
-                          backgroundColor: `${camp.color}15`,
-                          color: camp.color,
-                          border: `1px solid ${camp.color}30`
-                        }}
-                      >
-                        {camp.name}
-                      </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                        {camp.linkCount} links
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Governance
+                  </button>
+                )}
+
+                {user ? (
+                  <button
+                    onClick={handleSignOut}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 text-rose-700 dark:text-rose-300 text-xs font-semibold transition cursor-pointer shadow-2xs"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Sign Out
+                  </button>
+                ) : (
+                  <a
+                    href="/login"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-black dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold shadow-xs transition"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    Sign In
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Profile Identity Card */}
+            <div className="p-6 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-600 dark:bg-indigo-500 text-white font-bold text-xl flex items-center justify-center uppercase shadow-md shrink-0">
+                    {user?.name?.charAt(0) || 'U'}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                        {user ? user.name : 'Guest Visitor'}
+                      </h2>
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                        activeRole === 'ADMIN'
+                          ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-500/30'
+                          : activeRole === 'USER'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-500/30'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                      }`}>
+                        {activeRole === 'ADMIN' ? '👑 Platform Admin' : activeRole === 'USER' ? '👤 Verified User' : '🌐 Visitor Mode'}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mb-2">
-                      {camp.description}
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {user?.email || 'Anonymous session — sign in to persist and manage your personal hubs and links'}
                     </p>
-                    {activeRole !== 'VISITOR' && (
-                      <div className="flex items-baseline justify-between text-xs">
-                        <span className="text-slate-500 dark:text-slate-400 text-[11px]">Traffic</span>
-                        <span className="font-mono text-xs font-semibold text-slate-900 dark:text-white">
-                          {(camp.totalClicks || 0).toLocaleString()} clicks
-                        </span>
-                      </div>
+                    {user?.id && (
+                      <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 pt-0.5">
+                        User ID: {user.id}
+                      </p>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
 
-            <LinksTable
-              links={links}
-              campaigns={campaigns}
-              onOpenQr={(link) => setQrModalLink(link)}
-              onToggleActive={handleToggleActive}
-              onDeleteLink={handleDeleteLink}
-              userRole={activeRole}
-            />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsRoleModalOpen(true)}
+                    className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                  >
+                    Change Session
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Embedded Your Activity Section Inside Profile */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-500" />
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">Your Activity</h2>
+                </div>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Audit trail of hub visits, access requests, and link actions
+                </span>
+              </div>
+              <ActivityView currentUser={user} />
+            </div>
           </div>
         )}
 
-        {/* TAB 3: YOUR ACTIVITY */}
-        {activeTab === 'activity' && (
-          <ActivityView currentUser={user} />
-        )}
-
-        {/* TAB 4: GOVERNANCE */}
-        {activeTab === 'governance' && (
-          activeRole === 'ADMIN' ? (
-            <GovernanceAdminView links={links} onLinksUpdated={fetchData} />
-          ) : (
-            <div className="p-8 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center max-w-lg mx-auto shadow-2xs space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center mx-auto">
-                <Lock className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
-                  Admin Role Required
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Visitors have no management access. Please sign in as an Administrator to access the governance console.
-                </p>
-              </div>
+        {/* VIEW 3: GOVERNANCE (For Admin) */}
+        {currentView === 'governance' && (
+          <div className="space-y-5 animate-in fade-in">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+              <button
+                onClick={() => setCurrentView('profile')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition cursor-pointer shadow-2xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Profile</span>
+              </button>
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white">Governance & Security Console</h1>
             </div>
-          )
+            {activeRole === 'ADMIN' ? (
+              <GovernanceAdminView links={links} onLinksUpdated={fetchData} />
+            ) : (
+              <div className="p-8 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center max-w-lg mx-auto shadow-2xs space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center mx-auto">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                    Admin Role Required
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Visitors have no management access. Please sign in as an Administrator to access the governance console.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </main>
 
