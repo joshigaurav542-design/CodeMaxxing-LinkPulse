@@ -553,19 +553,42 @@ export function getAnalyticsOverview(linkId?: string) {
     LIMIT 30
   `).all(...args) as any[];
 
+  const baseWhere = linkId ? 'WHERE link_id = ? AND is_bot = 0' : 'WHERE is_bot = 0';
+
   // Top Countries
   const countries = db.prepare(`
     SELECT country, COUNT(*) as count
-    FROM click_events ${whereClause ? whereClause + ' AND is_bot = 0' : 'WHERE is_bot = 0'}
+    FROM click_events
+    ${baseWhere} AND country IS NOT NULL AND country != ''
     GROUP BY country
     ORDER BY count DESC
-    LIMIT 8
+    LIMIT 10
+  `).all(...args) as any[];
+
+  // Top Cities (Real Geographical Distribution)
+  const cities = db.prepare(`
+    SELECT city, country, COUNT(*) as count
+    FROM click_events
+    ${baseWhere} AND city IS NOT NULL AND city != ''
+    GROUP BY city, country
+    ORDER BY count DESC
+    LIMIT 10
+  `).all(...args) as any[];
+
+  // Recent Live Locations
+  const recentLocations = db.prepare(`
+    SELECT id, country, city, timestamp, device_type, os, browser, referrer
+    FROM click_events
+    ${baseWhere} AND country IS NOT NULL AND country != ''
+    ORDER BY timestamp DESC
+    LIMIT 10
   `).all(...args) as any[];
 
   // Device Breakdown
   const devices = db.prepare(`
     SELECT device_type, COUNT(*) as count
-    FROM click_events ${whereClause ? whereClause + ' AND is_bot = 0' : 'WHERE is_bot = 0'}
+    FROM click_events
+    ${baseWhere}
     GROUP BY device_type
     ORDER BY count DESC
   `).all(...args) as any[];
@@ -573,7 +596,8 @@ export function getAnalyticsOverview(linkId?: string) {
   // OS Breakdown
   const os = db.prepare(`
     SELECT os, COUNT(*) as count
-    FROM click_events ${whereClause ? whereClause + ' AND is_bot = 0' : 'WHERE is_bot = 0'}
+    FROM click_events
+    ${baseWhere}
     GROUP BY os
     ORDER BY count DESC
     LIMIT 5
@@ -582,11 +606,13 @@ export function getAnalyticsOverview(linkId?: string) {
   // Referrers
   const referrers = db.prepare(`
     SELECT referrer, COUNT(*) as count
-    FROM click_events ${whereClause ? whereClause + ' AND is_bot = 0' : 'WHERE is_bot = 0'}
+    FROM click_events
+    ${baseWhere}
     GROUP BY referrer
     ORDER BY count DESC
     LIMIT 6
   `).all(...args) as any[];
+
 
   return {
     totalClicks: totals.total_clicks || 0,
@@ -595,11 +621,23 @@ export function getAnalyticsOverview(linkId?: string) {
     uniqueVisitors: totals.unique_visitors || 0,
     timeSeries: timeSeries.map((t) => ({ date: t.date, clicks: t.clicks, humanClicks: t.human_clicks })),
     countries: countries.map((c) => ({ country: c.country || 'Unknown', count: c.count })),
+    cities: cities.map((c) => ({ city: c.city || 'Unknown', country: c.country || 'Unknown', count: c.count })),
+    recentLocations: recentLocations.map((r) => ({
+      id: r.id,
+      country: r.country,
+      city: r.city,
+      timestamp: r.timestamp,
+      deviceType: r.device_type,
+      os: r.os,
+      browser: r.browser,
+      referrer: r.referrer
+    })),
     devices: devices.map((d) => ({ device: d.device_type || 'other', count: d.count })),
     os: os.map((o) => ({ os: o.os || 'Other', count: o.count })),
     referrers: referrers.map((r) => ({ referrer: r.referrer || 'Direct', count: r.count }))
   };
 }
+
 
 function mapLinkRow(r: any): Link {
   return {

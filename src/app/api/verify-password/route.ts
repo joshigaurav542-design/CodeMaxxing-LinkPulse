@@ -27,9 +27,13 @@ export async function POST(req: NextRequest) {
 
     // Password passed! Dispatch non-blocking telemetry event
     const worker = getTelemetryWorker();
-    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+               req.headers.get('x-real-ip') ||
+               '127.0.0.1';
     const userAgent = req.headers.get('user-agent') || 'Mozilla/5.0';
     const referrer = req.headers.get('referer') || 'password-gate';
+    const country = req.headers.get('cf-ipcountry') || req.headers.get('x-vercel-ip-country') || undefined;
+    const city = req.headers.get('cf-ipcity') || req.headers.get('x-vercel-ip-city') || undefined;
 
     worker.enqueue({
       linkId: link.id,
@@ -37,8 +41,11 @@ export async function POST(req: NextRequest) {
       ip,
       userAgent,
       referrer,
+      country,
+      city,
       timestamp: new Date().toISOString()
     });
+
 
     return NextResponse.json({
       success: true,

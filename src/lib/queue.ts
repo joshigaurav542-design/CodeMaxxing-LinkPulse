@@ -3,6 +3,7 @@ import { UAParser } from 'ua-parser-js';
 import { recordClickEvent } from './db';
 import { hashIpAddress } from './security';
 import { getCache } from './cache';
+import { resolveRealGeo } from './geoip';
 
 export interface TelemetryPayload {
   linkId: string;
@@ -11,7 +12,10 @@ export interface TelemetryPayload {
   userAgent: string;
   referrer: string;
   timestamp: string;
+  country?: string;
+  city?: string;
 }
+
 
 // In-Memory Async Telemetry Queue (Decouples Redirection from DB Latency)
 class TelemetryQueueWorker {
@@ -73,8 +77,8 @@ class TelemetryQueueWorker {
           deviceType = 'tablet';
         }
 
-        // Geo-IP estimation (Supports X-Forwarded-For headers or simulated geo distribution for local environments)
-        const geo = resolveGeoLocation(item.ip);
+        // Real Geo-IP Resolution (Zero user wait during redirect, non-blocking background queue)
+        const geo = await resolveRealGeo(item.ip, item.country, item.city);
 
         const cleanReferrer = item.referrer && item.referrer !== '' ? item.referrer : 'direct';
 
@@ -115,24 +119,6 @@ class TelemetryQueueWorker {
   }
 }
 
-function resolveGeoLocation(ip: string): { country: string; city: string } {
-  // If local / private IP, return a realistic realistic distribution for demo purposes
-  if (ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip === 'unknown') {
-    const geos = [
-      { country: 'India', city: 'Dehradun' },
-      { country: 'India', city: 'Delhi' },
-      { country: 'India', city: 'Bangalore' },
-      { country: 'United States', city: 'San Francisco' },
-      { country: 'United States', city: 'New York' },
-      { country: 'United Kingdom', city: 'London' },
-      { country: 'Germany', city: 'Berlin' },
-      { country: 'Japan', city: 'Tokyo' }
-    ];
-    return geos[Math.floor(Math.random() * geos.length)];
-  }
-
-  return { country: 'United States', city: 'Cloud Edge' };
-}
 
 declare global {
   // eslint-disable-next-line no-var

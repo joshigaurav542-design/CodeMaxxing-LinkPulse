@@ -10,7 +10,10 @@ export interface RedirectContext {
   userAgent: string;
   referrer: string;
   providedPassword?: string;
+  country?: string;
+  city?: string;
 }
+
 
 /**
  * Real-Time Redirect Rule Engine (Hot Path)
@@ -141,8 +144,11 @@ export async function evaluateRedirect(ctx: RedirectContext): Promise<RedirectEv
     ip: ip || '127.0.0.1',
     userAgent: userAgent || 'Mozilla/5.0',
     referrer: referrer || 'direct',
+    country: ctx.country,
+    city: ctx.city,
     timestamp: new Date().toISOString()
   });
+
 
   // RFC 9110 HTTP 302 (Found / Temporary Redirect)
   return {

@@ -11,16 +11,31 @@ export default async function RedirectPage({ params }: { params: Promise<{ code:
   const { code } = await params;
   const headerList = await headers();
 
-  const ip = headerList.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+  const ip = headerList.get('x-forwarded-for')?.split(',')[0].trim() ||
+             headerList.get('x-real-ip') ||
+             '127.0.0.1';
   const userAgent = headerList.get('user-agent') || 'Mozilla/5.0';
   const referrer = headerList.get('referer') || 'direct';
+
+  const country = headerList.get('cf-ipcountry') ||
+                  headerList.get('x-vercel-ip-country') ||
+                  headerList.get('cloudfront-viewer-country-name') ||
+                  headerList.get('x-country-code') ||
+                  undefined;
+  const city = headerList.get('cf-ipcity') ||
+               headerList.get('x-vercel-ip-city') ||
+               headerList.get('cloudfront-viewer-city') ||
+               undefined;
 
   const result = await evaluateRedirect({
     code,
     ip,
     userAgent,
-    referrer
+    referrer,
+    country,
+    city
   });
+
 
   // 1. Direct Passthrough Redirect (RFC 9110 HTTP 302/307)
   if (result.action === 'REDIRECT') {
