@@ -16,17 +16,27 @@ import {
   AlertTriangle,
   Loader2
 } from 'lucide-react';
-import { Campaign, Link } from '@/lib/types';
+import { Campaign, Link, LinkHub } from '@/lib/types';
 
 interface CreateLinkModalProps {
   isOpen: boolean;
   onClose: () => void;
   campaigns: Campaign[];
+  hubs?: LinkHub[];
+  initialHubId?: string;
   onLinkCreated: (link: Link) => void;
   userId?: string;
 }
 
-export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCreated, userId }: CreateLinkModalProps) {
+export default function CreateLinkModal({
+  isOpen,
+  onClose,
+  campaigns,
+  hubs = [],
+  initialHubId,
+  onLinkCreated,
+  userId
+}: CreateLinkModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
 
   // Step 1 State
@@ -41,6 +51,11 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
 
   // Step 2 State (Rules & Routing)
   const [campaignId, setCampaignId] = useState('');
+  const [hubId, setHubId] = useState(initialHubId || '');
+
+  useEffect(() => {
+    if (initialHubId) setHubId(initialHubId);
+  }, [initialHubId]);
   const [enablePassword, setEnablePassword] = useState(false);
   const [password, setPassword] = useState('');
   const [enableExpiry, setEnableExpiry] = useState(false);
@@ -140,6 +155,7 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
       customAlias: customAlias.trim() || undefined,
       title: title.trim() || undefined,
       campaignId: campaignId || undefined,
+      hubId: hubId || undefined,
       password: enablePassword && password.trim() ? password.trim() : undefined,
       expiresAt: enableExpiry && expiresAt ? new Date(expiresAt).toISOString() : undefined,
       clickLimit: enableClickLimit && clickLimit ? parseInt(clickLimit, 10) : undefined,
@@ -314,6 +330,32 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
           ) : (
             /* STEP 2: RULES, EXPIRY & ROUTING */
             <div className="space-y-3.5">
+              {/* Link Hub Picker */}
+              {hubs && hubs.length > 0 && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                    <span>Target Link Hub</span>
+                    {hubId && (
+                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">
+                        Linked to Hub
+                      </span>
+                    )}
+                  </label>
+                  <select
+                    value={hubId}
+                    onChange={(e) => setHubId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
+                  >
+                    <option value="">No Hub (Standalone Shortlink)</option>
+                    {hubs.map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.name} (/hub/{h.slug})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Campaign Picker */}
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">

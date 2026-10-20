@@ -48,11 +48,66 @@ export interface Link {
   deviceRules?: DeviceRules | null;
   workspaceId: string;
   campaignId?: string | null;
+  hubId?: string | null;
   createdById: string;
   createdAt: string;
   updatedAt: string;
   campaign?: Campaign;
+  hub?: LinkHub;
   tags?: string[];
+}
+
+export type HubRole = 'ADMIN' | 'CONTRIBUTOR' | 'VISITOR';
+
+export interface LinkHub {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color: string;
+  category: string;
+  adminId: string;
+  adminName: string;
+  adminEmail: string;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  linkCount: number;
+  membersCount: number;
+  currentUserRole?: HubRole;
+}
+
+export interface HubMember {
+  id: string;
+  hubId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  role: 'CONTRIBUTOR' | 'ADMIN';
+  createdAt: string;
+}
+
+export type ActivityActionType =
+  | 'CREATE_HUB'
+  | 'JOIN_HUB'
+  | 'ADD_LINK'
+  | 'EDIT_LINK'
+  | 'DELETE_LINK'
+  | 'TOGGLE_LINK'
+  | 'VISIT_HUB';
+
+export interface UserActivity {
+  id: string;
+  userId: string;
+  userName: string;
+  actionType: ActivityActionType;
+  title: string;
+  description: string;
+  hubId?: string | null;
+  hubName?: string | null;
+  linkId?: string | null;
+  linkTitle?: string | null;
+  createdAt: string;
 }
 
 export interface ClickEvent {

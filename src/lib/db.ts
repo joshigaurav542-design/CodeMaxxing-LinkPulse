@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import { User, Workspace, Campaign, Link, ClickEvent, DomainBlocklist, LinkInBio } from './types';
+import { User, Workspace, Campaign, Link, ClickEvent, DomainBlocklist, LinkInBio, LinkHub, HubMember, UserActivity, ActivityActionType, HubRole } from './types';
 import { hashPassword, verifyPassword } from './security';
 
 // Global singleton to prevent multiple database handles in Next.js development HMR
@@ -31,6 +31,7 @@ export function getDatabase(): DatabaseSync {
 
   initSchema(db);
   seedInitialData(db);
+  seedLinkHubsIfEmpty(db);
 
   global.__linkpulse_db = db;
   return db;
@@ -131,10 +132,58 @@ function initSchema(db: DatabaseSync) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS link_hubs (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      description TEXT,
+      color TEXT DEFAULT '#4f46e5',
+      category TEXT DEFAULT 'General',
+      admin_id TEXT NOT NULL,
+      is_public INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS hub_members (
+      id TEXT PRIMARY KEY,
+      hub_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      role TEXT DEFAULT 'CONTRIBUTOR',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (hub_id) REFERENCES link_hubs(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(hub_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_activities (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      user_name TEXT,
+      action_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      hub_id TEXT,
+      hub_name TEXT,
+      link_id TEXT,
+      link_title TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_activity_user ON user_activities(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_hubs_slug ON link_hubs(slug);
+    CREATE INDEX IF NOT EXISTS idx_hubs_admin ON link_hubs(admin_id);
+    CREATE INDEX IF NOT EXISTS idx_hub_members_hub ON hub_members(hub_id);
+    CREATE INDEX IF NOT EXISTS idx_hub_members_user ON hub_members(user_id);
   `);
 
   try {
     db.exec('ALTER TABLE links ADD COLUMN tags TEXT;');
+  } catch {}
+  try {
+    db.exec('ALTER TABLE links ADD COLUMN hub_id TEXT;');
   } catch {}
 }
 
@@ -314,35 +363,164 @@ function seedInitialData(db: DatabaseSync) {
   );
 }
 
+function seedLinkHubsIfEmpty(db: DatabaseSync) {
+  try {
+    const hubCheck = db.prepare('SELECT count(*) as count FROM link_hubs').get() as { count: number };
+    if (hubCheck && hubCheck.count > 0) return;
+
+    const now = new Date().toISOString();
+    const adminId = 'usr-admin-001';
+    const userId = 'usr-marketer-002';
+
+    const hub1 = 'hub-innovista-01';
+    const hub2 = 'hub-growth-02';
+    const hub3 = 'hub-developer-03';
+
+    const insertHubStmt = db.prepare(`
+      INSERT INTO link_hubs (id, name, slug, description, color, category, admin_id, is_public, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+    `);
+
+    insertHubStmt.run(hub1, 'Innovista 2026 Hackathon Hub', 'innovista-2026', 'Official presentation links, demo portal, and project documentation for Innovista 2026.', '#6366f1', 'Hackathon & Tech', adminId, now, now);
+    insertHubStmt.run(hub2, 'Growth & Product Marketing Hub', 'global-growth', 'Affiliate promotions, social blitz links, flash coupons, and partner landing pages.', '#10b981', 'Marketing & Sales', userId, now, now);
+    insertHubStmt.run(hub3, 'Developer APIs & Tooling Hub', 'dev-ecosystem', 'SDK downloads, documentation portals, Postman collections, and open-source packages.', '#06b6d4', 'Developer Tools', adminId, now, now);
+
+    const insertMemberStmt = db.prepare(`
+      INSERT OR IGNORE INTO hub_members (id, hub_id, user_id, role, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    insertMemberStmt.run('mem-1', hub1, adminId, 'ADMIN', now);
+    insertMemberStmt.run('mem-2', hub1, userId, 'CONTRIBUTOR', now);
+    insertMemberStmt.run('mem-3', hub2, userId, 'ADMIN', now);
+    insertMemberStmt.run('mem-4', hub3, adminId, 'ADMIN', now);
+
+    try {
+      db.prepare(`UPDATE links SET hub_id = ? WHERE id IN ('lnk-hack-01', 'lnk-conf-03', 'lnk-exp-05')`).run(hub1);
+      db.prepare(`UPDATE links SET hub_id = ? WHERE id IN ('lnk-flash-04')`).run(hub2);
+      db.prepare(`UPDATE links SET hub_id = ? WHERE id IN ('lnk-app-02')`).run(hub3);
+    } catch {}
+
+    const actStmt = db.prepare(`
+      INSERT INTO user_activities (id, user_id, user_name, action_type, title, description, hub_id, hub_name, link_id, link_title, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    actStmt.run(
+      'act-1',
+      adminId,
+      'Gaurav Joshi (Admin)',
+      'CREATE_HUB',
+      'Created Link Hub',
+      'Created new Link Hub "Innovista 2026 Hackathon Hub"',
+      hub1,
+      'Innovista 2026 Hackathon Hub',
+      null,
+      null,
+      new Date(Date.now() - 3600000 * 5).toISOString()
+    );
+
+    actStmt.run(
+      'act-2',
+      adminId,
+      'Gaurav Joshi (Admin)',
+      'ADD_LINK',
+      'Added Link to Hub',
+      'Added link "GEHU Tech Geeks Hackathon Portal" to Innovista 2026 Hackathon Hub',
+      hub1,
+      'Innovista 2026 Hackathon Hub',
+      'lnk-hack-01',
+      'GEHU Tech Geeks Hackathon Portal',
+      new Date(Date.now() - 3600000 * 4).toISOString()
+    );
+
+    actStmt.run(
+      'act-3',
+      userId,
+      'CodeMaxxing Lead',
+      'JOIN_HUB',
+      'Gained User Access',
+      'Gained contributor access to "Innovista 2026 Hackathon Hub"',
+      hub1,
+      'Innovista 2026 Hackathon Hub',
+      null,
+      null,
+      new Date(Date.now() - 3600000 * 3).toISOString()
+    );
+
+    actStmt.run(
+      'act-4',
+      userId,
+      'CodeMaxxing Lead',
+      'CREATE_HUB',
+      'Created Link Hub',
+      'Created new Link Hub "Growth & Product Marketing Hub"',
+      hub2,
+      'Growth & Product Marketing Hub',
+      null,
+      null,
+      new Date(Date.now() - 3600000 * 2).toISOString()
+    );
+
+    actStmt.run(
+      'act-5',
+      userId,
+      'CodeMaxxing Lead',
+      'ADD_LINK',
+      'Added Link to Hub',
+      'Added link "Black Friday VIP 90% Coupon" to Growth & Product Marketing Hub',
+      hub2,
+      'Growth & Product Marketing Hub',
+      'lnk-flash-04',
+      'Black Friday VIP 90% Coupon',
+      new Date(Date.now() - 3600000).toISOString()
+    );
+  } catch (err) {
+    console.error('Error seeding link hubs:', err);
+  }
+}
+
 // ==================== Repository Helpers ====================
 
-export function getAllLinks(userId?: string): Link[] {
+export function getAllLinks(userId?: string, hubId?: string): Link[] {
   const db = getDatabase();
-  const query = userId
-    ? `
-      SELECT l.*, c.name as campaign_name, c.color as campaign_color
-      FROM links l
-      LEFT JOIN campaigns c ON l.campaign_id = c.id
-      WHERE l.created_by_id = ?
-      ORDER BY l.created_at DESC
-    `
-    : `
-      SELECT l.*, c.name as campaign_name, c.color as campaign_color
-      FROM links l
-      LEFT JOIN campaigns c ON l.campaign_id = c.id
-      ORDER BY l.created_at DESC
-    `;
+  const whereClauses: string[] = [];
+  const args: any[] = [];
 
-  const rows = (userId ? db.prepare(query).all(userId) : db.prepare(query).all()) as any[];
+  if (userId) {
+    whereClauses.push('l.created_by_id = ?');
+    args.push(userId);
+  }
+
+  if (hubId) {
+    whereClauses.push('l.hub_id = ?');
+    args.push(hubId);
+  }
+
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  const query = `
+    SELECT l.*, c.name as campaign_name, c.color as campaign_color,
+           h.name as hub_name, h.slug as hub_slug, h.color as hub_color
+    FROM links l
+    LEFT JOIN campaigns c ON l.campaign_id = c.id
+    LEFT JOIN link_hubs h ON l.hub_id = h.id
+    ${whereSql}
+    ORDER BY l.created_at DESC
+  `;
+
+  const rows = db.prepare(query).all(...args) as any[];
   return rows.map(mapLinkRow);
 }
 
 export function getLinkByCodeOrAlias(code: string): Link | null {
   const db = getDatabase();
   const row = db.prepare(`
-    SELECT l.*, c.name as campaign_name, c.color as campaign_color
+    SELECT l.*, c.name as campaign_name, c.color as campaign_color,
+           h.name as hub_name, h.slug as hub_slug, h.color as hub_color
     FROM links l
     LEFT JOIN campaigns c ON l.campaign_id = c.id
+    LEFT JOIN link_hubs h ON l.hub_id = h.id
     WHERE l.short_code = ? OR l.custom_alias = ?
   `).get(code, code) as any;
 
@@ -360,6 +538,7 @@ export function createLink(data: {
   clickLimit?: number;
   deviceRules?: Record<string, string>;
   campaignId?: string;
+  hubId?: string;
   workspaceId?: string;
   createdById?: string;
   tags?: string[];
@@ -377,8 +556,8 @@ export function createLink(data: {
     INSERT INTO links (
       id, short_code, custom_alias, destination_url, title,
       is_active, is_banned, password_hash, expires_at, click_limit, click_count,
-      device_rules, tags, workspace_id, campaign_id, created_by_id, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
+      device_rules, tags, workspace_id, campaign_id, hub_id, created_by_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     data.shortCode,
@@ -392,10 +571,32 @@ export function createLink(data: {
     tagsJson,
     wsId,
     data.campaignId || null,
+    data.hubId || null,
     userId,
     now,
     now
   );
+
+  // If created in a hub or by user, log activity
+  try {
+    let hubName = 'Global Links';
+    if (data.hubId) {
+      const hubRow = db.prepare('SELECT name FROM link_hubs WHERE id = ?').get(data.hubId) as any;
+      if (hubRow) hubName = hubRow.name;
+    }
+    const userRow = db.prepare('SELECT name FROM users WHERE id = ?').get(userId) as any;
+    logUserActivity({
+      userId,
+      userName: userRow?.name || 'User',
+      actionType: 'ADD_LINK',
+      title: 'Added Link to Hub',
+      description: `Added link "${data.title || data.shortCode}" to ${hubName}`,
+      hubId: data.hubId || null,
+      hubName: data.hubId ? hubName : null,
+      linkId: id,
+      linkTitle: data.title || data.shortCode
+    });
+  } catch {}
 
   return getLinkByCodeOrAlias(data.shortCode)!;
 }
@@ -425,9 +626,11 @@ export function updateLinkStatus(id: string, updates: { isActive?: boolean; isBa
 export function getLinkById(id: string): Link | null {
   const db = getDatabase();
   const row = db.prepare(`
-    SELECT l.*, c.name as campaign_name, c.color as campaign_color
+    SELECT l.*, c.name as campaign_name, c.color as campaign_color,
+           h.name as hub_name, h.slug as hub_slug, h.color as hub_color
     FROM links l
     LEFT JOIN campaigns c ON l.campaign_id = c.id
+    LEFT JOIN link_hubs h ON l.hub_id = h.id
     WHERE l.id = ?
   `).get(id) as any;
 
@@ -435,8 +638,26 @@ export function getLinkById(id: string): Link | null {
   return mapLinkRow(row);
 }
 
-export function deleteLink(id: string): boolean {
+export function deleteLink(id: string, requestingUserId?: string): boolean {
   const db = getDatabase();
+  try {
+    const link = getLinkById(id);
+    if (link) {
+      const uId = requestingUserId || link.createdById;
+      const userRow = db.prepare('SELECT name FROM users WHERE id = ?').get(uId) as any;
+      logUserActivity({
+        userId: uId,
+        userName: userRow?.name || 'User',
+        actionType: 'DELETE_LINK',
+        title: 'Deleted Link',
+        description: `Removed link "${link.title || link.shortCode}"`,
+        hubId: link.hubId || null,
+        hubName: link.hub?.name || null,
+        linkId: id,
+        linkTitle: link.title || link.shortCode
+      });
+    }
+  } catch {}
   const info = db.prepare('DELETE FROM links WHERE id = ?').run(id);
   return Number(info.changes) > 0;
 }
@@ -703,6 +924,7 @@ function mapLinkRow(r: any): Link {
     deviceRules: r.device_rules ? JSON.parse(r.device_rules) : null,
     workspaceId: r.workspace_id,
     campaignId: r.campaign_id,
+    hubId: r.hub_id || null,
     createdById: r.created_by_id,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -712,6 +934,21 @@ function mapLinkRow(r: any): Link {
       color: r.campaign_color,
       workspaceId: r.workspace_id,
       createdAt: r.created_at
+    } : undefined,
+    hub: r.hub_name ? {
+      id: r.hub_id,
+      name: r.hub_name,
+      slug: r.hub_slug,
+      color: r.hub_color || '#4f46e5',
+      category: '',
+      adminId: '',
+      adminName: '',
+      adminEmail: '',
+      isPublic: true,
+      createdAt: '',
+      updatedAt: '',
+      linkCount: 0,
+      membersCount: 0
     } : undefined,
     tags: r.tags ? (typeof r.tags === 'string' ? JSON.parse(r.tags) : r.tags) : []
   };
@@ -771,4 +1008,330 @@ export function authenticateUser(email: string, password: string): User | null {
     role: user.role,
     createdAt: user.createdAt
   };
+}
+
+// ================= LINK HUBS & COLLABORATION =================
+
+export function getAllHubs(userId?: string): LinkHub[] {
+  const db = getDatabase();
+  const rows = db.prepare(`
+    SELECT h.*, u.name as admin_name, u.email as admin_email,
+           (SELECT COUNT(*) FROM links l WHERE l.hub_id = h.id) as link_count,
+           (SELECT COUNT(*) FROM hub_members hm WHERE hm.hub_id = h.id) as members_count
+    FROM link_hubs h
+    LEFT JOIN users u ON h.admin_id = u.id
+    ORDER BY h.created_at DESC
+  `).all() as any[];
+
+  return rows.map((r) => {
+    let currentUserRole: HubRole = 'VISITOR';
+    if (userId) {
+      if (r.admin_id === userId) {
+        currentUserRole = 'ADMIN';
+      } else {
+        const mem = db.prepare('SELECT role FROM hub_members WHERE hub_id = ? AND user_id = ?').get(r.id, userId) as any;
+        if (mem) {
+          currentUserRole = mem.role === 'ADMIN' ? 'ADMIN' : 'CONTRIBUTOR';
+        }
+      }
+    }
+
+    return {
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      description: r.description || '',
+      color: r.color || '#4f46e5',
+      category: r.category || 'General',
+      adminId: r.admin_id,
+      adminName: r.admin_name || 'Admin',
+      adminEmail: r.admin_email || '',
+      isPublic: Boolean(r.is_public),
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      linkCount: Number(r.link_count || 0),
+      membersCount: Number(r.members_count || 0),
+      currentUserRole
+    };
+  });
+}
+
+export function getHubById(idOrSlug: string, userId?: string): LinkHub | null {
+  const db = getDatabase();
+  const r = db.prepare(`
+    SELECT h.*, u.name as admin_name, u.email as admin_email,
+           (SELECT COUNT(*) FROM links l WHERE l.hub_id = h.id) as link_count,
+           (SELECT COUNT(*) FROM hub_members hm WHERE hm.hub_id = h.id) as members_count
+    FROM link_hubs h
+    LEFT JOIN users u ON h.admin_id = u.id
+    WHERE h.id = ? OR h.slug = ?
+  `).get(idOrSlug, idOrSlug) as any;
+
+  if (!r) return null;
+
+  let currentUserRole: HubRole = 'VISITOR';
+  if (userId) {
+    if (r.admin_id === userId) {
+      currentUserRole = 'ADMIN';
+    } else {
+      const mem = db.prepare('SELECT role FROM hub_members WHERE hub_id = ? AND user_id = ?').get(r.id, userId) as any;
+      if (mem) {
+        currentUserRole = mem.role === 'ADMIN' ? 'ADMIN' : 'CONTRIBUTOR';
+      }
+    }
+  }
+
+  return {
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    description: r.description || '',
+    color: r.color || '#4f46e5',
+    category: r.category || 'General',
+    adminId: r.admin_id,
+    adminName: r.admin_name || 'Admin',
+    adminEmail: r.admin_email || '',
+    isPublic: Boolean(r.is_public),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    linkCount: Number(r.link_count || 0),
+    membersCount: Number(r.members_count || 0),
+    currentUserRole
+  };
+}
+
+export function createHub(data: {
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  category?: string;
+  adminId: string;
+  adminName?: string;
+  adminEmail?: string;
+  isPublic?: boolean;
+}): LinkHub {
+  const db = getDatabase();
+  const id = `hub-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+  const now = new Date().toISOString();
+  const cleanSlug = data.slug.toLowerCase().trim().replace(/[^a-z0-9_-]/g, '-');
+
+  const existing = db.prepare('SELECT id FROM link_hubs WHERE slug = ?').get(cleanSlug);
+  if (existing) {
+    throw new Error(`A link hub with slug "${cleanSlug}" already exists. Please choose a different slug.`);
+  }
+
+  db.prepare(`
+    INSERT INTO link_hubs (id, name, slug, description, color, category, admin_id, is_public, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    data.name.trim(),
+    cleanSlug,
+    data.description?.trim() || null,
+    data.color || '#4f46e5',
+    data.category || 'General',
+    data.adminId,
+    data.isPublic !== false ? 1 : 0,
+    now,
+    now
+  );
+
+  // Automatically add creator as ADMIN in hub_members
+  db.prepare(`
+    INSERT OR IGNORE INTO hub_members (id, hub_id, user_id, role, created_at)
+    VALUES (?, ?, ?, 'ADMIN', ?)
+  `).run(`mem-${Date.now().toString(36)}`, id, data.adminId, now);
+
+  logUserActivity({
+    userId: data.adminId,
+    userName: data.adminName || 'Admin',
+    actionType: 'CREATE_HUB',
+    title: 'Created Link Hub',
+    description: `Created new Link Hub "${data.name.trim()}"`,
+    hubId: id,
+    hubName: data.name.trim()
+  });
+
+  return getHubById(id, data.adminId)!;
+}
+
+export function joinHub(hubId: string, userId: string, userName?: string): boolean {
+  const db = getDatabase();
+  const hub = getHubById(hubId);
+  if (!hub) throw new Error('Hub not found.');
+
+  // If already admin, don't downgrade
+  if (hub.adminId === userId) return true;
+
+  const memId = `mem-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    INSERT OR REPLACE INTO hub_members (id, hub_id, user_id, role, created_at)
+    VALUES (?, ?, ?, 'CONTRIBUTOR', ?)
+  `).run(memId, hubId, userId, now);
+
+  logUserActivity({
+    userId,
+    userName: userName || 'User',
+    actionType: 'JOIN_HUB',
+    title: 'Gained User Access',
+    description: `Gained contributor access to add links in "${hub.name}"`,
+    hubId: hub.id,
+    hubName: hub.name
+  });
+
+  return true;
+}
+
+export function leaveHub(hubId: string, userId: string): boolean {
+  const db = getDatabase();
+  const hub = getHubById(hubId);
+  if (!hub) return false;
+  if (hub.adminId === userId) throw new Error('Hub Admin cannot leave their own hub.');
+
+  const info = db.prepare('DELETE FROM hub_members WHERE hub_id = ? AND user_id = ?').run(hubId, userId);
+  return Number(info.changes) > 0;
+}
+
+export function deleteHub(hubId: string, requestingUserId: string): boolean {
+  const db = getDatabase();
+  const hub = getHubById(hubId);
+  if (!hub) return false;
+
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(requestingUserId) as any;
+  if (hub.adminId !== requestingUserId && user?.role !== 'ADMIN') {
+    throw new Error('Only the Hub Admin can delete this hub.');
+  }
+
+  db.prepare('DELETE FROM links WHERE hub_id = ?').run(hubId);
+  db.prepare('DELETE FROM hub_members WHERE hub_id = ?').run(hubId);
+  const info = db.prepare('DELETE FROM link_hubs WHERE id = ?').run(hubId);
+
+  logUserActivity({
+    userId: requestingUserId,
+    actionType: 'DELETE_LINK',
+    title: 'Deleted Link Hub',
+    description: `Deleted Hub "${hub.name}" and all its links`,
+    hubId,
+    hubName: hub.name
+  });
+
+  return Number(info.changes) > 0;
+}
+
+export function getHubMembers(hubId: string): HubMember[] {
+  const db = getDatabase();
+  const rows = db.prepare(`
+    SELECT hm.id, hm.hub_id, hm.user_id, hm.role, hm.created_at,
+           u.name as user_name, u.email as user_email
+    FROM hub_members hm
+    LEFT JOIN users u ON hm.user_id = u.id
+    WHERE hm.hub_id = ?
+    ORDER BY hm.role ASC, hm.created_at DESC
+  `).all(hubId) as any[];
+
+  return rows.map((r) => ({
+    id: r.id,
+    hubId: r.hub_id,
+    userId: r.user_id,
+    userName: r.user_name || 'User',
+    userEmail: r.user_email || '',
+    role: r.role,
+    createdAt: r.created_at
+  }));
+}
+
+export function getHubLinks(hubId: string): Link[] {
+  const db = getDatabase();
+  const rows = db.prepare(`
+    SELECT l.*, c.name as campaign_name, c.color as campaign_color,
+           h.name as hub_name, h.slug as hub_slug, h.color as hub_color
+    FROM links l
+    LEFT JOIN campaigns c ON l.campaign_id = c.id
+    LEFT JOIN link_hubs h ON l.hub_id = h.id
+    WHERE l.hub_id = ?
+    ORDER BY l.created_at DESC
+  `).all(hubId) as any[];
+
+  return rows.map(mapLinkRow);
+}
+
+// ================= USER ACTIVITY LOGGING =================
+
+export function logUserActivity(data: {
+  userId: string;
+  userName?: string;
+  actionType: ActivityActionType;
+  title: string;
+  description: string;
+  hubId?: string | null;
+  hubName?: string | null;
+  linkId?: string | null;
+  linkTitle?: string | null;
+}): UserActivity {
+  const db = getDatabase();
+  const id = `act-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+  const now = new Date().toISOString();
+
+  let name: string = data.userName || '';
+  if (!name) {
+    const u = db.prepare('SELECT name FROM users WHERE id = ?').get(data.userId) as any;
+    name = (u?.name as string) || 'User';
+  }
+
+  db.prepare(`
+    INSERT INTO user_activities (id, user_id, user_name, action_type, title, description, hub_id, hub_name, link_id, link_title, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    data.userId,
+    name,
+    data.actionType,
+    data.title,
+    data.description,
+    data.hubId || null,
+    data.hubName || null,
+    data.linkId || null,
+    data.linkTitle || null,
+    now
+  );
+
+  return {
+    id,
+    userId: data.userId,
+    userName: name,
+    actionType: data.actionType,
+    title: data.title,
+    description: data.description,
+    hubId: data.hubId || null,
+    hubName: data.hubName || null,
+    linkId: data.linkId || null,
+    linkTitle: data.linkTitle || null,
+    createdAt: now
+  };
+}
+
+export function getUserActivities(userId?: string, limit: number = 60): UserActivity[] {
+  const db = getDatabase();
+  const query = userId
+    ? `SELECT * FROM user_activities WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`
+    : `SELECT * FROM user_activities ORDER BY created_at DESC LIMIT ?`;
+
+  const rows = (userId ? db.prepare(query).all(userId, limit) : db.prepare(query).all(limit)) as any[];
+
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.user_id,
+    userName: r.user_name || 'User',
+    actionType: r.action_type,
+    title: r.title,
+    description: r.description,
+    hubId: r.hub_id,
+    hubName: r.hub_name,
+    linkId: r.link_id,
+    linkTitle: r.link_title,
+    createdAt: r.created_at
+  }));
 }

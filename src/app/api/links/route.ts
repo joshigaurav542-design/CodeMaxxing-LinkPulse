@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const campaignId = searchParams.get('campaignId');
+    const hubId = searchParams.get('hubId');
     const tag = searchParams.get('tag')?.toLowerCase();
     const search = searchParams.get('search')?.toLowerCase();
     const userId = searchParams.get('userId');
@@ -14,10 +15,14 @@ export async function GET(req: NextRequest) {
 
     // Role-based visibility: 'USER' views own links only; 'ADMIN' views all links
     const scopeUserId = role === 'USER' && userId ? userId : undefined;
-    let links = getAllLinks(scopeUserId);
+    let links = getAllLinks(scopeUserId, hubId || undefined);
 
     if (campaignId) {
       links = links.filter((l) => l.campaignId === campaignId);
+    }
+
+    if (hubId) {
+      links = links.filter((l) => l.hubId === hubId);
     }
 
     if (tag) {
@@ -44,7 +49,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { destinationUrl, customAlias, title, password, expiresAt, clickLimit, deviceRules, campaignId, createdById, tags } = body;
+    const { destinationUrl, customAlias, title, password, expiresAt, clickLimit, deviceRules, campaignId, hubId, createdById, tags } = body;
 
     // 1. WHATWG URL Standard Validation
     if (!destinationUrl || !isValidUrl(destinationUrl)) {
@@ -95,6 +100,7 @@ export async function POST(req: NextRequest) {
       clickLimit: clickLimit ? parseInt(clickLimit, 10) : undefined,
       deviceRules: deviceRules || undefined,
       campaignId: campaignId || undefined,
+      hubId: hubId || undefined,
       createdById: createdById || undefined,
       tags: Array.isArray(tags) ? tags : typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter(Boolean) : undefined
     });

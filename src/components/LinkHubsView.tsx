@@ -1,0 +1,394 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+  Layers, Plus, Search, ShieldCheck, UserCheck, Globe,
+  Eye, ArrowRight, Sparkles, Filter, Users, Link2, Loader2
+} from 'lucide-react';
+import { LinkHub, Link, HubRole } from '@/lib/types';
+import HubDetailView from './HubDetailView';
+import CreateHubModal from './CreateHubModal';
+
+interface LinkHubsViewProps {
+  currentUser: { id?: string; email: string; name: string } | null;
+  onOpenCreateLinkModal: (hubId?: string) => void;
+  onOpenQrModal: (link: Link) => void;
+}
+
+export default function LinkHubsView({
+  currentUser,
+  onOpenCreateLinkModal,
+  onOpenQrModal
+}: LinkHubsViewProps) {
+  const [hubs, setHubs] = useState<LinkHub[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedHub, setSelectedHub] = useState<LinkHub | null>(null);
+  const [initialViewMode, setInitialViewMode] = useState<'visitor' | 'management'>('management');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'my-hubs' | 'joined'>('all');
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [isCreateHubOpen, setIsCreateHubOpen] = useState(false);
+  const [joiningHubId, setJoiningHubId] = useState<string | null>(null);
+
+  const fetchHubs = async () => {
+    try {
+      const url = currentUser?.id ? `/api/hubs?userId=${currentUser.id}` : '/api/hubs';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) {
+        setHubs(data.hubs || []);
+      }
+    } catch (e) {
+      console.error('Error fetching hubs', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHubs();
+  }, [currentUser?.id]);
+
+  const handleHubCreated = (newHub: LinkHub) => {
+    setHubs((prev) => [newHub, ...prev]);
+    setSelectedHub(newHub);
+  };
+
+  const handleOpenHub = (hub: LinkHub, mode: 'visitor' | 'management') => {
+    setInitialViewMode(mode);
+    setSelectedHub(hub);
+  };
+
+  const handleQuickJoin = async (e: React.MouseEvent, hub: LinkHub) => {
+    e.stopPropagation();
+    if (!currentUser?.id) return;
+
+    setJoiningHubId(hub.id);
+    try {
+      const res = await fetch(`/api/hubs/${hub.id}/access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          userName: currentUser.name
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchHubs();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setJoiningHubId(null);
+    }
+  };
+
+  // Filtered Hubs
+  const filteredHubs = hubs.filter((hub) => {
+    if (activeFilter === 'my-hubs') {
+      if (hub.adminId !== currentUser?.id) return false;
+    } else if (activeFilter === 'joined') {
+      if (hub.currentUserRole !== 'CONTRIBUTOR') return false;
+    }
+
+    if (selectedCategory !== 'All' && hub.category !== selectedCategory) {
+      return false;
+    }
+
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      hub.name.toLowerCase().includes(q) ||
+      hub.slug.toLowerCase().includes(q) ||
+      (hub.description && hub.description.toLowerCase().includes(q)) ||
+      hub.adminName.toLowerCase().includes(q) ||
+      hub.category.toLowerCase().includes(q)
+    );
+  });
+
+  const categories = ['All', ...Array.from(new Set(hubs.map((h) => h.category).filter(Boolean)))];
+
+  // If a hub is actively selected, show its detail view!
+  if (selectedHub) {
+    return (
+      <HubDetailView
+        hub={selectedHub}
+        currentUser={currentUser}
+        onBack={() => {
+          setSelectedHub(null);
+          fetchHubs();
+        }}
+        onOpenCreateLinkModal={(hubId) => onOpenCreateLinkModal(hubId)}
+        onOpenQrModal={onOpenQrModal}
+        onHubUpdated={fetchHubs}
+        onDeleteHub={() => {
+          setSelectedHub(null);
+          fetchHubs();
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* View Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Link Hubs
+            </h2>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-500/30">
+              {hubs.length} Hubs Available
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Each link hub has an admin who controls links on that hub. View as visitor or get user access to collaborate.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setIsCreateHubOpen(true)}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          Create Link Hub
+        </button>
+      </div>
+
+      {/* Filter Tabs & Search Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Tabs: All / My Hubs / Joined */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-900 rounded-xl max-w-fit border border-slate-200 dark:border-slate-800">
+          <button
+            onClick={() => setActiveFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              activeFilter === 'all'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            All Hubs ({hubs.length})
+          </button>
+
+          <button
+            onClick={() => setActiveFilter('my-hubs')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              activeFilter === 'my-hubs'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
+            My Managed Hubs ({hubs.filter((h) => h.adminId === currentUser?.id).length})
+          </button>
+
+          <button
+            onClick={() => setActiveFilter('joined')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              activeFilter === 'joined'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
+            Joined Hubs ({hubs.filter((h) => h.currentUserRole === 'CONTRIBUTOR').length})
+          </button>
+        </div>
+
+        {/* Search & Category Filter */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search hubs..."
+              className="pl-8 pr-3.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            />
+          </div>
+
+          {categories.length > 2 && (
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
+            >
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+
+      {/* Hubs Grid */}
+      {loading ? (
+        <div className="p-16 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+          <span>Loading link hubs...</span>
+        </div>
+      ) : filteredHubs.length === 0 ? (
+        <div className="p-14 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center space-y-3">
+          <Layers className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
+          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            No Link Hubs found
+          </h4>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            {activeFilter === 'my-hubs'
+              ? "You haven't created any link hubs yet. Click below to create your first hub!"
+              : activeFilter === 'joined'
+              ? "You haven't joined any link hubs as a contributor yet. Explore all hubs to get access."
+              : 'Try adjusting your search criteria or create a new hub.'}
+          </p>
+          <button
+            onClick={() => setIsCreateHubOpen(true)}
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer"
+          >
+            Create Link Hub
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredHubs.map((hub) => {
+            const isHubAdmin = hub.adminId === currentUser?.id || hub.currentUserRole === 'ADMIN';
+            const hasUserAccess = isHubAdmin || hub.currentUserRole === 'CONTRIBUTOR';
+
+            return (
+              <div
+                key={hub.id}
+                onClick={() => handleOpenHub(hub, 'management')}
+                className="group relative p-5 rounded-3xl bg-white dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-lg transition-all flex flex-col justify-between space-y-4 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 overflow-hidden"
+              >
+                {/* Accent Top Bar */}
+                <div
+                  className="absolute top-0 left-0 right-0 h-1.5 transition-all group-hover:h-2"
+                  style={{ backgroundColor: hub.color || '#6366f1' }}
+                />
+
+                <div className="space-y-2.5 pt-1">
+                  {/* Category & Role Badges */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      {hub.category || 'General'}
+                    </span>
+
+                    {/* Role Status Tag */}
+                    {isHubAdmin ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20">
+                        <ShieldCheck className="w-2.5 h-2.5" /> Hub Admin
+                      </span>
+                    ) : hasUserAccess ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/20">
+                        <UserCheck className="w-2.5 h-2.5" /> Contributor
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        <Globe className="w-2.5 h-2.5" /> Visitor
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Hub Title & Description */}
+                  <div>
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white tracking-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
+                      {hub.name}
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+                      /hub/{hub.slug}
+                    </p>
+                  </div>
+
+                  {hub.description && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                      {hub.description}
+                    </p>
+                  )}
+
+                  {/* Admin Tag */}
+                  <div className="pt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="text-[11px] text-slate-400">Admin:</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                      👑 {hub.adminName || 'Admin'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bottom Stats & CTAs */}
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-1 font-medium">
+                      <Link2 className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{hub.linkCount || 0} links</span>
+                    </div>
+                    <div className="flex items-center gap-1 font-medium">
+                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{hub.membersCount || 0} members</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons on Card */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenHub(hub, 'visitor');
+                      }}
+                      className="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-slate-500" />
+                      <span>View as Visitor</span>
+                    </button>
+
+                    {!hasUserAccess ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleQuickJoin(e, hub)}
+                        disabled={joiningHubId === hub.id}
+                        className="flex-1 py-1.5 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
+                      >
+                        {joiningHubId === hub.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Get Access</span>
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenHub(hub, 'management')}
+                        className="flex-1 py-1.5 px-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs active:scale-95"
+                      >
+                        <span>Manage Hub</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal for Creating Hub */}
+      {isCreateHubOpen && currentUser && (
+        <CreateHubModal
+          isOpen={isCreateHubOpen}
+          onClose={() => setIsCreateHubOpen(false)}
+          onHubCreated={handleHubCreated}
+          userId={currentUser.id || 'usr-admin-001'}
+          userName={currentUser.name}
+          userEmail={currentUser.email}
+        />
+      )}
+    </div>
+  );
+}
