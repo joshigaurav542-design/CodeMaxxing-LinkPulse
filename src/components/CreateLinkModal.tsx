@@ -13,8 +13,6 @@ import {
   Clock,
   Gauge,
   Smartphone,
-  Sparkles,
-  Layers,
   AlertTriangle,
   Loader2
 } from 'lucide-react';
@@ -79,19 +77,26 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
       } finally {
         setAliasChecking(false);
       }
-    }, 400);
+    }, 350);
 
     return () => clearTimeout(timer);
   }, [customAlias]);
 
-  // Pre-publish warning generator
+  // Pre-publish heuristic validation
   useEffect(() => {
     const warnings: string[] = [];
-    if (destinationUrl.startsWith('http://')) {
-      warnings.push('Insecure Protocol: Destination uses unencrypted http:// instead of https://.');
-    }
-    if (destinationUrl.includes('bit.ly') || destinationUrl.includes('tinyurl.com')) {
-      warnings.push('Chained Redirect Notice: Destination is another URL shortener, which may cause latency spikes.');
+    if (destinationUrl) {
+      try {
+        const parsed = new URL(destinationUrl);
+        if (parsed.protocol === 'http:') {
+          warnings.push('Destination uses unencrypted HTTP instead of HTTPS.');
+        }
+        if (parsed.hostname.includes('bit.ly') || parsed.hostname.includes('tinyurl.com')) {
+          warnings.push('Destination points to another shortener (nested redirection hop).');
+        }
+      } catch {
+        // Handled upon submission
+      }
     }
     setPrePublishWarnings(warnings);
   }, [destinationUrl]);
@@ -99,212 +104,207 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
   if (!isOpen) return null;
 
   const handleStep1Next = () => {
+    setErrorMsg(null);
     if (!destinationUrl.trim()) {
-      setErrorMsg('Destination URL is required.');
+      setErrorMsg('Please specify a valid destination URL.');
       return;
     }
+
     try {
-      const parsed = new URL(destinationUrl.trim());
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        setErrorMsg('Only http:// and https:// URLs are supported.');
+      const u = new URL(destinationUrl.trim());
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+        setErrorMsg('URL scheme must be HTTP or HTTPS.');
         return;
       }
     } catch {
-      setErrorMsg('Please enter a valid URL starting with https://');
+      setErrorMsg('Please enter a valid RFC-compliant URL (e.g. https://example.com).');
       return;
     }
 
     if (customAlias && aliasStatus && !aliasStatus.available) {
-      setErrorMsg('Please choose an available custom alias or leave blank to auto-generate.');
+      setErrorMsg('Custom alias is already taken or reserved.');
       return;
     }
 
-    setErrorMsg(null);
     setStep(2);
   };
 
-  const handleFinalSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     setErrorMsg(null);
 
+    const payload: Record<string, any> = {
+      destinationUrl: destinationUrl.trim(),
+      customAlias: customAlias.trim() || undefined,
+      title: title.trim() || undefined,
+      campaignId: campaignId || undefined,
+      password: enablePassword && password.trim() ? password.trim() : undefined,
+      expiresAt: enableExpiry && expiresAt ? new Date(expiresAt).toISOString() : undefined,
+      clickLimit: enableClickLimit && clickLimit ? parseInt(clickLimit, 10) : undefined,
+      deviceRules: enableDeviceRouting && (iosUrl.trim() || androidUrl.trim() || desktopUrl.trim()) ? {
+        ios: iosUrl.trim() || undefined,
+        android: androidUrl.trim() || undefined,
+        desktop: desktopUrl.trim() || undefined
+      } : undefined
+    };
+
     try {
-      const payload: any = {
-        destinationUrl: destinationUrl.trim(),
-        customAlias: customAlias.trim() || undefined,
-        title: title.trim() || undefined,
-        campaignId: campaignId || undefined
-      };
-
-      if (enablePassword && password.trim()) {
-        payload.password = password.trim();
-      }
-      if (enableExpiry && expiresAt) {
-        payload.expiresAt = new Date(expiresAt).toISOString();
-      }
-      if (enableClickLimit && clickLimit) {
-        payload.clickLimit = parseInt(clickLimit, 10);
-      }
-      if (enableDeviceRouting) {
-        payload.deviceRules = {
-          ios: iosUrl.trim() || undefined,
-          android: androidUrl.trim() || undefined,
-          desktop: desktopUrl.trim() || undefined
-        };
-      }
-
       const res = await fetch('/api/links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
 
-      if (!res.ok || !data.success) {
-        setErrorMsg(data.error || 'Failed to create link.');
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setErrorMsg(json.error || 'Failed to create link.');
         setIsSubmitting(false);
         return;
       }
 
-      // Celebrate with confetti
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { y: 0.6 }
-      });
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 50,
+          origin: { y: 0.7 }
+        });
+      } catch {}
 
-      onLinkCreated(data.link);
+      onLinkCreated(json.link);
       onClose();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Network error occurred.');
+    } catch (e) {
+      setErrorMsg('Network error. Failed to save link.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden relative text-white">
-        {/* Wizard Header & Stepper */}
-        <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              <Link2 className="w-5 h-5" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl shadow-xl overflow-hidden relative transition-all">
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <Link2 className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-bold text-lg">Two-Step Link Creation Wizard</h2>
-              <p className="text-xs text-slate-400">Step {step} of 2: {step === 1 ? 'Target & Alias Identity' : 'Rules, Expiry & Device Routing'}</p>
+              <h2 className="font-semibold text-sm text-slate-900 dark:text-white">Create Short Link</h2>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Step {step} of 2: {step === 1 ? 'Destination & Alias' : 'Rules & Expiration'}
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition cursor-pointer">
-            <X className="w-5 h-5" />
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Stepper Progress Bar */}
-        <div className="w-full bg-slate-800 h-1">
-          <div className={`h-1 bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-300 ${step === 1 ? 'w-1/2' : 'w-full'}`} />
+        <div className="w-full bg-slate-100 dark:bg-slate-800 h-1">
+          <div className={`h-1 bg-indigo-600 dark:bg-indigo-500 transition-all duration-300 ${step === 1 ? 'w-1/2' : 'w-full'}`} />
         </div>
 
-        <div className="p-6 max-h-[75vh] overflow-y-auto">
+        <div className="p-6 max-h-[75vh] overflow-y-auto space-y-4">
           {errorMsg && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {step === 1 ? (
-            /* ================= STEP 1: DESTINATION & ALIAS ================= */
-            <div className="space-y-5">
+            /* STEP 1: DESTINATION & ALIAS */
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-                  Destination URL <span className="text-rose-400">*</span>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  Destination URL <span className="text-rose-500">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="url"
-                    value={destinationUrl}
-                    onChange={(e) => setDestinationUrl(e.target.value)}
-                    placeholder="https://example.com/very/long/landing-page"
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                    autoFocus
-                  />
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1.5">Checked against WHATWG standard & OWASP open-redirect policies.</p>
+                <input
+                  type="url"
+                  value={destinationUrl}
+                  onChange={(e) => setDestinationUrl(e.target.value)}
+                  placeholder="https://example.com/long-landing-page"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+                  autoFocus
+                />
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Checked against open-redirect security policies.</p>
               </div>
 
               {/* Title Input */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Link Title (Optional)
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Black Friday Special Promo Banner"
-                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  placeholder="e.g. Summer Campaign Landing"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
                 />
               </div>
 
-              {/* Custom Alias Input with Live Availability Check */}
+              {/* Custom Alias Input */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                     Custom Back-Half / Alias
                   </label>
                   {aliasChecking && (
-                    <span className="text-xs text-indigo-400 flex items-center gap-1">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Verifying...
+                    <span className="text-[11px] text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Checking...
                     </span>
                   )}
                   {aliasStatus && !aliasChecking && (
-                    <span className={`text-xs flex items-center gap-1 font-medium ${aliasStatus.available ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {aliasStatus.available ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+                    <span className={`text-[11px] flex items-center gap-1 font-medium ${aliasStatus.available ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                      {aliasStatus.available ? <CheckCircle2 className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
                       {aliasStatus.message}
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center rounded-xl bg-slate-950 border border-slate-800 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/50">
-                  <span className="px-3.5 py-3 text-xs font-mono text-slate-400 bg-slate-900/60 border-r border-slate-800 select-none">
+                <div className="flex items-center rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/30">
+                  <span className="px-3 py-2.5 text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-900/60 border-r border-slate-200 dark:border-slate-800 select-none">
                     linkpulse.io/
                   </span>
                   <input
                     type="text"
                     value={customAlias}
                     onChange={(e) => setCustomAlias(e.target.value)}
-                    placeholder="my-custom-name (leave empty for Base62 code)"
-                    className="w-full px-3 py-3 bg-transparent text-white text-sm placeholder-slate-600 focus:outline-none font-mono"
+                    placeholder="custom-name (optional)"
+                    className="w-full px-3 py-2.5 bg-transparent text-slate-900 dark:text-white text-xs placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none font-mono"
                   />
                 </div>
               </div>
 
               {/* Pre-Publish Warnings */}
               {prePublishWarnings.length > 0 && (
-                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
-                    <AlertTriangle className="w-4 h-4" /> Pre-Publish Advisory
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-amber-800 dark:text-amber-400">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Note
                   </div>
                   {prePublishWarnings.map((w, idx) => (
-                    <p key={idx} className="text-[11px] text-amber-300/80 pl-5">{w}</p>
+                    <p key={idx} className="text-[11px] text-amber-700 dark:text-amber-300/90 pl-5">{w}</p>
                   ))}
                 </div>
               )}
             </div>
           ) : (
-            /* ================= STEP 2: RULES, EXPIRY & ROUTING ================= */
-            <div className="space-y-5">
+            /* STEP 2: RULES, EXPIRY & ROUTING */
+            <div className="space-y-3.5">
               {/* Campaign Picker */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Assign to Campaign
                 </label>
                 <select
                   value={campaignId}
                   onChange={(e) => setCampaignId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
                 >
                   <option value="">No Campaign (Default Workspace)</option>
                   {campaigns.map((c) => (
@@ -315,23 +315,21 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
                 </select>
               </div>
 
-              {/* Password Protection Toggle */}
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-3">
+              {/* Password Protection */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400">
-                      <Lock className="w-4 h-4" />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-200">Password Gate</h4>
-                      <p className="text-[11px] text-slate-400">Require credentials before executing redirect</p>
+                      <h4 className="text-xs font-medium text-slate-900 dark:text-slate-200">Password Protection</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Require password before redirect</p>
                     </div>
                   </div>
                   <input
                     type="checkbox"
                     checked={enablePassword}
                     onChange={(e) => setEnablePassword(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-900 border-slate-700 cursor-pointer"
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                   />
                 </div>
                 {enablePassword && (
@@ -340,28 +338,26 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter access password..."
-                    className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                   />
                 )}
               </div>
 
-              {/* Scheduled Expiry Toggle */}
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-3">
+              {/* Scheduled Expiry */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
-                      <Clock className="w-4 h-4" />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-200">Expiration Timestamp</h4>
-                      <p className="text-[11px] text-slate-400">Auto-disable link after promotion ends (RFC 410 Gone)</p>
+                      <h4 className="text-xs font-medium text-slate-900 dark:text-slate-200">Link Expiration</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Auto-expire link after date</p>
                     </div>
                   </div>
                   <input
                     type="checkbox"
                     checked={enableExpiry}
                     onChange={(e) => setEnableExpiry(e.target.checked)}
-                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 bg-slate-900 border-slate-700 cursor-pointer"
+                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
                   />
                 </div>
                 {enableExpiry && (
@@ -369,28 +365,26 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
                     type="datetime-local"
                     value={expiresAt}
                     onChange={(e) => setExpiresAt(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                   />
                 )}
               </div>
 
-              {/* Click-Cap Counter Toggle */}
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-3">
+              {/* Click-Cap Limit */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">
-                      <Gauge className="w-4 h-4" />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Gauge className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-200">Click-Cap Limit</h4>
-                      <p className="text-[11px] text-slate-400">Atomic limit (e.g. first 500 visitors only)</p>
+                      <h4 className="text-xs font-medium text-slate-900 dark:text-slate-200">Click Cap</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Limit max number of clicks</p>
                     </div>
                   </div>
                   <input
                     type="checkbox"
                     checked={enableClickLimit}
                     onChange={(e) => setEnableClickLimit(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-900 border-slate-700 cursor-pointer"
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                 </div>
                 {enableClickLimit && (
@@ -400,60 +394,58 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
                     value={clickLimit}
                     onChange={(e) => setClickLimit(e.target.value)}
                     placeholder="e.g. 500"
-                    className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                   />
                 )}
               </div>
 
-              {/* Device Targeting Toggle */}
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-3">
+              {/* Device Targeting */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
-                      <Smartphone className="w-4 h-4" />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-200">Device-Specific Smart Routing</h4>
-                      <p className="text-[11px] text-slate-400">Route iOS, Android, and Desktop users to custom destinations</p>
+                      <h4 className="text-xs font-medium text-slate-900 dark:text-slate-200">Device Targeting</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Custom URLs for iOS / Android / Desktop</p>
                     </div>
                   </div>
                   <input
                     type="checkbox"
                     checked={enableDeviceRouting}
                     onChange={(e) => setEnableDeviceRouting(e.target.checked)}
-                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 bg-slate-900 border-slate-700 cursor-pointer"
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                   />
                 </div>
                 {enableDeviceRouting && (
-                  <div className="space-y-2 pt-2 border-t border-slate-800/60 text-xs">
+                  <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs">
                     <div>
-                      <label className="text-slate-400 block mb-1">iOS App Store URL:</label>
+                      <label className="text-slate-600 dark:text-slate-400 block mb-1">iOS Destination URL:</label>
                       <input
                         type="url"
                         value={iosUrl}
                         onChange={(e) => setIosUrl(e.target.value)}
                         placeholder="https://apps.apple.com/..."
-                        className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                        className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
                       />
                     </div>
                     <div>
-                      <label className="text-slate-400 block mb-1">Android Google Play URL:</label>
+                      <label className="text-slate-600 dark:text-slate-400 block mb-1">Android Destination URL:</label>
                       <input
                         type="url"
                         value={androidUrl}
                         onChange={(e) => setAndroidUrl(e.target.value)}
                         placeholder="https://play.google.com/store/..."
-                        className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                        className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
                       />
                     </div>
                     <div>
-                      <label className="text-slate-400 block mb-1">Desktop Landing URL:</label>
+                      <label className="text-slate-600 dark:text-slate-400 block mb-1">Desktop Destination URL:</label>
                       <input
                         type="url"
                         value={desktopUrl}
                         onChange={(e) => setDesktopUrl(e.target.value)}
-                        placeholder="https://github.com/desktop..."
-                        className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                        placeholder="https://example.com/desktop"
+                        className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
                       />
                     </div>
                   </div>
@@ -463,15 +455,15 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
           )}
         </div>
 
-        {/* Modal Footer Controls */}
-        <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
+        {/* Modal Footer */}
+        <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between">
           {step === 2 ? (
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
             >
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Step 1
+              <ArrowLeft className="w-3.5 h-3.5" /> Back
             </button>
           ) : (
             <div />
@@ -481,26 +473,24 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
             <button
               type="button"
               onClick={handleStep1Next}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium flex items-center gap-1.5 transition cursor-pointer shadow-xs"
             >
-              Configure Rules & Expiry
-              <ArrowRight className="w-4 h-4" />
+              Next: Configure Rules
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           ) : (
             <button
               type="button"
               onClick={handleFinalSubmit}
               disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white text-xs font-bold shadow-lg shadow-indigo-500/30 flex items-center gap-2 transition disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium flex items-center gap-1.5 transition disabled:opacity-50 cursor-pointer shadow-xs"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Publishing...
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
                 </>
               ) : (
-                <>
-                  <Sparkles className="w-4 h-4" /> Create & Warm Cache
-                </>
+                'Create Short Link'
               )}
             </button>
           )}

@@ -37,7 +37,6 @@ export default function PasswordGate({ shortCode, title }: PasswordGateProps) {
         return;
       }
 
-      // Successful unlock - navigate to target URL
       window.location.href = data.targetUrl;
     } catch {
       setError('Connection failed. Please retry.');
@@ -46,43 +45,39 @@ export default function PasswordGate({ shortCode, title }: PasswordGateProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-        {/* Glow accent */}
-        <div className="absolute -top-16 -right-16 w-36 h-36 bg-indigo-500/20 rounded-full blur-2xl" />
-        <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-blue-500/20 rounded-full blur-2xl" />
-
-        <div className="relative z-10 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center mx-auto mb-5 text-indigo-400">
-            <Lock className="w-8 h-8" />
+    <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-white flex items-center justify-center p-4 transition-colors">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-7 shadow-lg relative transition-all">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-6 h-6" />
           </div>
 
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 mb-3">
-            <ShieldCheck className="w-3.5 h-3.5" /> Password Gate
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-500/20 mb-2">
+            <ShieldCheck className="w-3 h-3" /> Protected Route
           </span>
 
-          <h1 className="text-2xl font-bold tracking-tight text-white mb-2">
+          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white mb-1">
             {title || 'Protected Link'}
           </h1>
-          <p className="text-sm text-slate-400 mb-6">
-            Access to <span className="font-mono text-indigo-300 font-semibold">/{shortCode}</span> is encrypted. Enter the authorized password to continue.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+            Access to <span className="font-mono text-indigo-600 dark:text-indigo-400 font-semibold">/{shortCode}</span> requires password authentication.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password..."
-                className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-mono text-center tracking-widest text-lg"
+                placeholder="Enter password"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-mono text-center tracking-widest text-sm"
                 autoFocus
               />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs text-left">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="flex items-center gap-1.5 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs text-left">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
@@ -90,25 +85,23 @@ export default function PasswordGate({ shortCode, title }: PasswordGateProps) {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+              className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Verifying...
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Verifying...
                 </>
               ) : (
                 <>
-                  Unlock & Proceed
-                  <ArrowRight className="w-4 h-4" />
+                  Continue
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-white/5 text-xs text-slate-500 flex items-center justify-center gap-1">
-            <span>Powered by</span>
-            <span className="font-semibold text-slate-400">LinkPulse Engine</span>
+          <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400">
+            <span>Powered by LinkPulse</span>
           </div>
         </div>
       </div>

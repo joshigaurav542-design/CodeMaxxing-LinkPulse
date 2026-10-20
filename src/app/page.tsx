@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Link2, Plus, UploadCloud, BarChart3, ShieldCheck, Sparkles,
-  Layers, ExternalLink, Zap, RefreshCw, Cpu, Activity, Share2
+  Link2, Plus, UploadCloud, BarChart3, ShieldCheck,
+  Layers, Zap, Share2, Activity, Clock
 } from 'lucide-react';
 import LinksTable from '@/components/LinksTable';
 import CreateLinkModal from '@/components/CreateLinkModal';
@@ -11,6 +11,7 @@ import CsvBulkUploadModal from '@/components/CsvBulkUploadModal';
 import QrCodeModal from '@/components/QrCodeModal';
 import AnalyticsView from '@/components/AnalyticsView';
 import GovernanceAdminView from '@/components/GovernanceAdminView';
+import ThemeToggle from '@/components/ThemeToggle';
 import { Link, Campaign } from '@/lib/types';
 
 export default function DashboardPage() {
@@ -70,173 +71,186 @@ export default function DashboardPage() {
   const totalClicksAcrossLinks = links.reduce((acc, l) => acc + (l.clickCount || 0), 0);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
-      {/* Top Ambient Glow Highlights */}
-      <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="fixed top-20 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="min-h-screen flex flex-col font-sans">
       {/* Navigation Header */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80">
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-[#090d16]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-0.5 shadow-lg shadow-indigo-500/20">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Zap className="w-5 h-5 text-indigo-400 fill-indigo-400" />
-              </div>
+            <div className="w-8 h-8 rounded-xl bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center shadow-xs">
+              <Zap className="w-4 h-4 fill-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg text-white tracking-tight">LinkPulse</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  Sub-50ms Hot Path
+                <span className="font-semibold text-base text-slate-900 dark:text-white tracking-tight">LinkPulse</span>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-500/20">
+                  Sub-50ms
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">Team CodeMaxxing • Graphic Era Hill University</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">URL Routing & Analytics Engine</p>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          {/* Action Buttons & Theme Switcher */}
+          <div className="flex items-center gap-2.5">
+            <ThemeToggle />
+
             <a
               href="/bio/codemaxxing"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 border border-slate-800 transition cursor-pointer"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition cursor-pointer shadow-2xs"
             >
-              <Share2 className="w-3.5 h-3.5 text-purple-400" />
-              Link-in-Bio
+              <Share2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              Bio Page
             </a>
 
             <button
               onClick={() => setIsCsvOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 border border-slate-800 transition cursor-pointer"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition cursor-pointer shadow-2xs"
             >
-              <UploadCloud className="w-4 h-4 text-indigo-400" />
-              Bulk CSV Import
+              <UploadCloud className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              Bulk Import
             </button>
 
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white text-xs font-bold shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white text-xs font-medium shadow-xs transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              Create Short Link
+              Create Link
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 relative z-10">
-        {/* Architecture Status Banner */}
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900/90 to-indigo-950/40 border border-indigo-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <Activity className="w-5 h-5 animate-pulse" />
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6">
+        {/* Minimal Stats Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
+              <span className="text-xs font-medium">System Status</span>
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">System Architecture Status: Online</h3>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              </div>
-              <p className="text-xs text-slate-400">
-                Layer 4A Redis in-memory cache active • Layer 4B BullMQ worker polling • RFC 9110 HTTP 302/307 ready
-              </p>
-            </div>
+            <div className="text-base font-semibold text-slate-900 dark:text-white">Operational</div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Hot-path cache active</p>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
-            <div className="flex items-center gap-1.5">
-              <Cpu className="w-4 h-4 text-indigo-400" />
-              <span>Target: &lt;50ms</span>
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
+              <span className="text-xs font-medium">Active Links</span>
+              <Layers className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
             </div>
-            <div className="flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-blue-400" />
-              <span>{links.length} Active Links</span>
+            <div className="text-base font-semibold text-slate-900 dark:text-white">{links.length}</div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Shortened routes</p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
+              <span className="text-xs font-medium">Total Traffic</span>
+              <Activity className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
             </div>
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>{totalClicksAcrossLinks.toLocaleString()} Total Clicks</span>
+            <div className="text-base font-semibold text-slate-900 dark:text-white">
+              {totalClicksAcrossLinks.toLocaleString()}
             </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Tracked redirects</p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
+              <span className="text-xs font-medium">Redirect Target</span>
+              <Clock className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+            </div>
+            <div className="text-base font-semibold text-slate-900 dark:text-white">&lt;50ms</div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">RFC 9110 HTTP 302/307</p>
           </div>
         </div>
 
         {/* View Switcher Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-900/80 rounded-xl max-w-fit border border-slate-200/80 dark:border-slate-800">
           <button
             onClick={() => {
               setActiveTab('links');
               setSelectedAnalyticsLinkId(undefined);
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition cursor-pointer ${
               activeTab === 'links'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Link2 className="w-4 h-4" />
-            Links Management Hub ({links.length})
+            <Link2 className="w-3.5 h-3.5" />
+            Links ({links.length})
           </button>
 
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition cursor-pointer ${
               activeTab === 'analytics'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <BarChart3 className="w-4 h-4" />
-            Live Analytics & Recharts
+            <BarChart3 className="w-3.5 h-3.5" />
+            Analytics
           </button>
 
           <button
             onClick={() => setActiveTab('governance')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition cursor-pointer ${
               activeTab === 'governance'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            Governance & Admin Console
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Governance
           </button>
         </div>
 
         {/* Tab 1: Links Management Hub */}
         {activeTab === 'links' && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             {/* Campaigns Ribbon */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {campaigns.map((camp) => (
-                <div
-                  key={camp.id}
-                  className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md relative overflow-hidden"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span
-                      className="px-2.5 py-0.5 rounded-full text-[11px] font-bold"
-                      style={{
-                        backgroundColor: `${camp.color}20`,
-                        color: camp.color,
-                        border: `1px solid ${camp.color}40`
-                      }}
-                    >
-                      {camp.name}
-                    </span>
-                    <span className="text-xs font-mono text-slate-400">{camp.linkCount} links</span>
+            {campaigns.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {campaigns.map((camp) => (
+                  <div
+                    key={camp.id}
+                    className="p-3.5 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span
+                        className="px-2 py-0.5 rounded-md text-[11px] font-medium"
+                        style={{
+                          backgroundColor: `${camp.color}15`,
+                          color: camp.color,
+                          border: `1px solid ${camp.color}30`
+                        }}
+                      >
+                        {camp.name}
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                        {camp.linkCount} links
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mb-2">
+                      {camp.description}
+                    </p>
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="text-slate-500 dark:text-slate-400 text-[11px]">Traffic</span>
+                      <span className="font-mono text-xs font-semibold text-slate-900 dark:text-white">
+                        {(camp.totalClicks || 0).toLocaleString()} clicks
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-400 line-clamp-1 mb-3">{camp.description}</p>
-                  <div className="flex items-baseline justify-between text-xs">
-                    <span className="text-slate-500 font-medium">Aggregated Traffic</span>
-                    <span className="font-mono text-sm font-bold text-white">
-                      {(camp.totalClicks || 0).toLocaleString()} clicks
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Links Table */}
             <LinksTable
@@ -256,13 +270,13 @@ export default function DashboardPage() {
         {activeTab === 'analytics' && (
           <div className="space-y-4">
             {selectedAnalyticsLinkId && (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs">
-                <span>Filtering metrics for selected link ID: <strong className="font-mono">{selectedAnalyticsLinkId}</strong></span>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-900 dark:text-indigo-300 text-xs">
+                <span>Filtering metrics for link: <strong className="font-mono font-medium">{selectedAnalyticsLinkId}</strong></span>
                 <button
                   onClick={() => setSelectedAnalyticsLinkId(undefined)}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-white font-medium cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium cursor-pointer text-xs"
                 >
-                  Show Global Platform Metrics
+                  View All Metrics
                 </button>
               </div>
             )}
@@ -277,15 +291,15 @@ export default function DashboardPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/60 py-6 text-center text-xs text-slate-500 relative z-10">
+      <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-slate-950/40 py-6 text-xs text-slate-500 dark:text-slate-400 mt-auto">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© 2026 LinkPulse — Built for TECH GEEKS Hackathon • Graphic Era Hill University</p>
-          <div className="flex items-center gap-4 text-slate-400">
+          <p>© 2026 LinkPulse — High-Performance URL Shortener</p>
+          <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
             <span>RFC 9110 HTTP 302/307</span>
             <span>•</span>
-            <span>WHATWG URL Standard</span>
+            <span>WHATWG Standard</span>
             <span>•</span>
-            <span>OWASP Redirection Hardened</span>
+            <span>OWASP Hardened</span>
           </div>
         </div>
       </footer>
