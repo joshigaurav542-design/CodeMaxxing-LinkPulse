@@ -89,10 +89,6 @@ function initSchema(db: DatabaseSync) {
       FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
-    try {
-      db.exec('ALTER TABLE links ADD COLUMN tags TEXT;');
-    } catch {}
-
     CREATE INDEX IF NOT EXISTS idx_links_short_code ON links(short_code);
     CREATE INDEX IF NOT EXISTS idx_links_custom_alias ON links(custom_alias);
     CREATE INDEX IF NOT EXISTS idx_links_workspace ON links(workspace_id);
@@ -136,6 +132,10 @@ function initSchema(db: DatabaseSync) {
       updated_at TEXT NOT NULL
     );
   `);
+
+  try {
+    db.exec('ALTER TABLE links ADD COLUMN tags TEXT;');
+  } catch {}
 }
 
 function seedInitialData(db: DatabaseSync) {
