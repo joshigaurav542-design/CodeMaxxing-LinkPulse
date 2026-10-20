@@ -1014,14 +1014,30 @@ export function authenticateUser(email: string, password: string): User | null {
 
 export function getAllHubs(userId?: string): LinkHub[] {
   const db = getDatabase();
-  const rows = db.prepare(`
-    SELECT h.*, u.name as admin_name, u.email as admin_email,
-           (SELECT COUNT(*) FROM links l WHERE l.hub_id = h.id) as link_count,
-           (SELECT COUNT(*) FROM hub_members hm WHERE hm.hub_id = h.id) as members_count
-    FROM link_hubs h
-    LEFT JOIN users u ON h.admin_id = u.id
-    ORDER BY h.created_at DESC
-  `).all() as any[];
+  let rows: any[];
+  if (userId) {
+    rows = db.prepare(`
+      SELECT h.*, u.name as admin_name, u.email as admin_email,
+             (SELECT COUNT(*) FROM links l WHERE l.hub_id = h.id) as link_count,
+             (SELECT COUNT(*) FROM hub_members hm WHERE hm.hub_id = h.id) as members_count
+      FROM link_hubs h
+      LEFT JOIN users u ON h.admin_id = u.id
+      WHERE h.is_public = 1
+         OR h.admin_id = ?
+         OR EXISTS (SELECT 1 FROM hub_members hm WHERE hm.hub_id = h.id AND hm.user_id = ?)
+      ORDER BY h.created_at DESC
+    `).all(userId, userId) as any[];
+  } else {
+    rows = db.prepare(`
+      SELECT h.*, u.name as admin_name, u.email as admin_email,
+             (SELECT COUNT(*) FROM links l WHERE l.hub_id = h.id) as link_count,
+             (SELECT COUNT(*) FROM hub_members hm WHERE hm.hub_id = h.id) as members_count
+      FROM link_hubs h
+      LEFT JOIN users u ON h.admin_id = u.id
+      WHERE h.is_public = 1
+      ORDER BY h.created_at DESC
+    `).all() as any[];
+  }
 
   return rows.map((r) => {
     let currentUserRole: HubRole = 'VISITOR';

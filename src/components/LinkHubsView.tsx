@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Layers, Plus, Search, ShieldCheck, UserCheck, Globe,
-  Eye, ArrowRight, Sparkles, Filter, Users, Link2, Loader2
+  Eye, ArrowRight, Sparkles, Filter, Users, Link2, Loader2,
+  Lock, Share2
 } from 'lucide-react';
 import { LinkHub, Link, HubRole } from '@/lib/types';
 import HubDetailView from './HubDetailView';
 import CreateHubModal from './CreateHubModal';
+import ShareHubModal from './ShareHubModal';
 
 interface LinkHubsViewProps {
   currentUser: { id?: string; email: string; name: string } | null;
@@ -29,6 +31,7 @@ export default function LinkHubsView({
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isCreateHubOpen, setIsCreateHubOpen] = useState(false);
   const [joiningHubId, setJoiningHubId] = useState<string | null>(null);
+  const [sharingHub, setSharingHub] = useState<LinkHub | null>(null);
 
   const fetchHubs = async () => {
     try {
@@ -47,6 +50,27 @@ export default function LinkHubsView({
 
   useEffect(() => {
     fetchHubs();
+
+    // Check if user visited via a direct share link (?hub=slug or ?hubId=id)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const hubParam = params.get('hub') || params.get('hubId');
+      if (hubParam) {
+        const fetchDirectHub = async () => {
+          try {
+            const res = await fetch(`/api/hubs/${hubParam}?userId=${currentUser?.id || ''}`);
+            const data = await res.json();
+            if (data.success && data.hub) {
+              setSelectedHub(data.hub);
+              setInitialViewMode('visitor');
+            }
+          } catch (err) {
+            console.error('Failed to load direct hub link', err);
+          }
+        };
+        fetchDirectHub();
+      }
+    }
   }, [currentUser?.id]);
 
   const handleHubCreated = (newHub: LinkHub) => {
@@ -272,9 +296,20 @@ export default function LinkHubsView({
                 <div className="space-y-2.5 pt-1">
                   {/* Category & Role Badges */}
                   <div className="flex items-center justify-between gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                      {hub.category || 'General'}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        {hub.category || 'General'}
+                      </span>
+                      {hub.isPublic ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/20">
+                          <Globe className="w-2.5 h-2.5" /> Public
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20">
+                          <Lock className="w-2.5 h-2.5" /> Private
+                        </span>
+                      )}
+                    </div>
 
                     {/* Role Status Tag */}
                     {isHubAdmin ? (
@@ -336,12 +371,25 @@ export default function LinkHubsView({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setSharingHub(hub);
+                      }}
+                      className="p-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
+                      title="Share Link Hub"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-indigo-500" />
+                      <span className="hidden sm:inline text-[11px]">Share</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         handleOpenHub(hub, 'visitor');
                       }}
                       className="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5 text-slate-500" />
-                      <span>View as Visitor</span>
+                      <span>View</span>
                     </button>
 
                     {!hasUserAccess ? (
@@ -366,7 +414,7 @@ export default function LinkHubsView({
                         onClick={() => handleOpenHub(hub, 'management')}
                         className="flex-1 py-1.5 px-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs active:scale-95"
                       >
-                        <span>Manage Hub</span>
+                        <span>Manage</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     )}
@@ -387,6 +435,15 @@ export default function LinkHubsView({
           userId={currentUser.id || 'usr-admin-001'}
           userName={currentUser.name}
           userEmail={currentUser.email}
+        />
+      )}
+
+      {/* Share Hub Modal */}
+      {sharingHub && (
+        <ShareHubModal
+          isOpen={!!sharingHub}
+          onClose={() => setSharingHub(null)}
+          hub={sharingHub}
         />
       )}
     </div>

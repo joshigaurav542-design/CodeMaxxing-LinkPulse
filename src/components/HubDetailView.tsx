@@ -8,6 +8,7 @@ import {
   Clock, Share2
 } from 'lucide-react';
 import { LinkHub, Link, HubMember, HubRole } from '@/lib/types';
+import ShareHubModal from './ShareHubModal';
 
 interface HubDetailViewProps {
   hub: LinkHub;
@@ -38,6 +39,7 @@ export default function HubDetailView({
   const [userRole, setUserRole] = useState<HubRole>(hub.currentUserRole || 'VISITOR');
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [isDeletingHub, setIsDeletingHub] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Fetch hub links & members
   const fetchHubData = async () => {
@@ -263,6 +265,20 @@ export default function HubDetailView({
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                 {hub.category || 'General Hub'}
               </span>
+
+              {/* Public vs Private Status */}
+              {hub.isPublic ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
+                  <Globe className="w-3 h-3" />
+                  Public Hub
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30">
+                  <Lock className="w-3 h-3" />
+                  Private Hub
+                </span>
+              )}
+
               <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
                 /hub/{hub.slug}
               </span>
@@ -316,6 +332,16 @@ export default function HubDetailView({
 
           {/* Action CTAs based on access */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            {/* Share Hub Button (for everyone) */}
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+              title="Share Link Hub"
+            >
+              <Share2 className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Share Hub</span>
+            </button>
+
             {!hasUserAccess && (
               <button
                 onClick={handleGetUserAccess}
@@ -383,19 +409,35 @@ export default function HubDetailView({
           {/* Visitor Mode Banner */}
           <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-500/10 border border-sky-200/80 dark:border-sky-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 text-xs text-sky-900 dark:text-sky-200">
-              <Globe className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+              {hub.isPublic ? (
+                <Globe className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+              ) : (
+                <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              )}
               <span>
-                <strong>Visitor Mode (Public Preview):</strong> You are previewing active links on this hub. Anyone with this link can view and open these destinations.
+                <strong>Visitor Mode ({hub.isPublic ? 'Public Preview' : 'Private Secret Link'}):</strong>{' '}
+                {hub.isPublic
+                  ? 'You are previewing active links on this public hub. Anyone can browse, click links, or request contributor access.'
+                  : 'You have accessed this private hub via a direct share link. Visitors can explore links or sign in to request contributor access.'}
               </span>
             </div>
-            {!hasUserAccess && (
+            <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={handleGetUserAccess}
-                className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer shrink-0"
+                onClick={() => setIsShareModalOpen(true)}
+                className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition cursor-pointer flex items-center gap-1.5"
               >
-                Get User Access
+                <Share2 className="w-3 h-3 text-indigo-500" />
+                Share
               </button>
-            )}
+              {!hasUserAccess && (
+                <button
+                  onClick={handleGetUserAccess}
+                  className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer"
+                >
+                  Get User Access
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Links Grid for Visitors */}
@@ -756,6 +798,15 @@ export default function HubDetailView({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Share Hub Modal */}
+      {isShareModalOpen && (
+        <ShareHubModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          hub={hub}
+        />
       )}
     </div>
   );

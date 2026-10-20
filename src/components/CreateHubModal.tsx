@@ -238,6 +238,70 @@ export default function CreateHubModal({
             </div>
           </div>
 
+          {/* Hub Visibility Selection (Public vs Private) */}
+          <div className="space-y-2 pt-1">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              Hub Access & Visibility <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Option 1: Public Hub */}
+              <div
+                onClick={() => setIsPublic(true)}
+                className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-2 select-none ${
+                  isPublic
+                    ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-1.5 rounded-xl ${isPublic ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">Public Hub</h4>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Open & Discoverable</span>
+                    </div>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isPublic ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 dark:border-slate-600'}`}>
+                    {isPublic && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-normal">
+                  Visitors are allowed to browse and discover this hub. Anyone can view links and request contributor access.
+                </p>
+              </div>
+
+              {/* Option 2: Private Hub */}
+              <div
+                onClick={() => setIsPublic(false)}
+                className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-2 select-none ${
+                  !isPublic
+                    ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/30 ring-2 ring-amber-500/20'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-1.5 rounded-xl ${!isPublic ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">Private Hub</h4>
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Direct Link Only</span>
+                    </div>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${!isPublic ? 'border-amber-500 bg-amber-500' : 'border-slate-300 dark:border-slate-600'}`}>
+                    {!isPublic && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-normal">
+                  Hidden from public catalogs. Only accessible through direct secret links sent by you to trusted users.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Admin Tag Notice */}
           <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200/70 dark:border-indigo-500/20 text-indigo-900 dark:text-indigo-200 text-xs flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
