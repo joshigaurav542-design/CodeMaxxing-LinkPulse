@@ -7,7 +7,8 @@ import {
 } from 'recharts';
 import {
   TrendingUp, Users, Shield, Bot, Globe, Smartphone,
-  RefreshCw, MousePointerClick, ArrowUpRight, Radio, MapPin
+  RefreshCw, MousePointerClick, ArrowUpRight, Radio, MapPin,
+  Laptop, Tablet
 } from 'lucide-react';
 import { getCountryFlag } from '@/lib/geoip';
 
@@ -49,6 +50,20 @@ function formatTimeAgo(dateString: string): string {
   } catch {
     return 'recently';
   }
+}
+
+function getDeviceIcon(device: string) {
+  const d = device.toLowerCase();
+  if (d.includes('mobile') || d.includes('phone') || d.includes('ios') || d.includes('android')) {
+    return <Smartphone className="w-3.5 h-3.5" />;
+  }
+  if (d.includes('tablet') || d.includes('ipad')) {
+    return <Tablet className="w-3.5 h-3.5" />;
+  }
+  if (d.includes('bot') || d.includes('crawler') || d.includes('spider')) {
+    return <Bot className="w-3.5 h-3.5" />;
+  }
+  return <Laptop className="w-3.5 h-3.5" />;
 }
 
 export default function AnalyticsView({
@@ -234,25 +249,41 @@ export default function AnalyticsView({
 
       {/* Main Time-Series Area Chart */}
       <div className="bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-5 shadow-2xs">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               Click Trajectory Over Time
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Telemetry event stream</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Telemetry event stream with dual series differentiation</p>
           </div>
-          <button
-            onClick={fetchAnalytics}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
-            Refresh
-          </button>
+
+          <div className="flex items-center gap-3">
+            {/* Non-color indicators legend */}
+            <div className="flex items-center gap-3 text-xs font-medium">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                <span className="w-3 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full inline-block" />
+                <span className="text-[11px] text-slate-700 dark:text-slate-300">Total (Solid)</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                <span className="w-3 border-b-2 border-dashed border-emerald-500 dark:border-emerald-400 inline-block" />
+                <span className="text-[11px] text-slate-700 dark:text-slate-300">Human (Dashed)</span>
+              </div>
+            </div>
+
+            <button
+              onClick={fetchAnalytics}
+              disabled={isRefreshing}
+              aria-label="Refresh telemetry analytics"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
+              Refresh
+            </button>
+          </div>
         </div>
 
-        <div className="h-60 w-full">
+        <div className="h-60 w-full" aria-label="Click Trajectory Over Time chart">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data.timeSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
@@ -265,20 +296,49 @@ export default function AnalyticsView({
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="date" stroke={isDark ? '#64748b' : '#94a3b8'} fontSize={11} tickLine={false} />
-              <YAxis stroke={isDark ? '#64748b' : '#94a3b8'} fontSize={11} tickLine={false} allowDecimals={false} />
+              <XAxis
+                dataKey="date"
+                stroke={isDark ? '#a1a1aa' : '#64748b'}
+                fontSize={11}
+                tickLine={false}
+                tick={{ fill: isDark ? '#a1a1aa' : '#475569' }}
+              />
+              <YAxis
+                stroke={isDark ? '#a1a1aa' : '#64748b'}
+                fontSize={11}
+                tickLine={false}
+                allowDecimals={false}
+                tick={{ fill: isDark ? '#a1a1aa' : '#475569' }}
+              />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: isDark ? '#0f172a' : '#ffffff',
-                  borderColor: isDark ? '#334155' : '#e2e8f0',
-                  color: isDark ? '#f8fafc' : '#0f172a',
+                  backgroundColor: isDark ? '#121215' : '#ffffff',
+                  borderColor: isDark ? '#27272a' : '#e2e8f0',
+                  color: isDark ? '#fafafa' : '#0f172a',
                   borderRadius: '0.75rem',
                   fontSize: '12px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.15)'
                 }}
               />
-              <Area type="monotone" dataKey="clicks" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#clickGradient)" name="Total Traffic" />
-              <Area type="monotone" dataKey="humanClicks" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#humanGradient)" name="Human Verified" />
+              <Area
+                type="monotone"
+                dataKey="clicks"
+                stroke="#6366f1"
+                strokeWidth={2.5}
+                fillOpacity={1}
+                fill="url(#clickGradient)"
+                name="Total Traffic"
+              />
+              <Area
+                type="monotone"
+                dataKey="humanClicks"
+                stroke="#10b981"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                fillOpacity={1}
+                fill="url(#humanGradient)"
+                name="Human Verified"
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -439,47 +499,81 @@ export default function AnalyticsView({
         </div>
 
         {/* Device & Client Breakdown */}
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-5 shadow-2xs">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2 mb-3.5">
-            <Smartphone className="w-4 h-4 text-emerald-500" />
-            Device Breakdown
-          </h3>
-          <div className="h-40 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data.devices}
-                  dataKey="count"
-                  nameKey="device"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={70}
-                  paddingAngle={4}
-                >
-                  {data.devices.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: isDark ? '#0f172a' : '#ffffff',
-                    borderColor: isDark ? '#334155' : '#e2e8f0',
-                    color: isDark ? '#f8fafc' : '#0f172a',
-                    borderRadius: '0.75rem',
-                    fontSize: '12px'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-5 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3.5">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-emerald-500" />
+                Device Breakdown
+              </h3>
+              <span className="text-[11px] text-slate-400">Non-color accessible metrics</span>
+            </div>
+
+            <div className="h-36 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data.devices}
+                    dataKey="count"
+                    nameKey="device"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={38}
+                    outerRadius={62}
+                    paddingAngle={4}
+                  >
+                    {data.devices.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: isDark ? '#121215' : '#ffffff',
+                      borderColor: isDark ? '#27272a' : '#e2e8f0',
+                      color: isDark ? '#fafafa' : '#0f172a',
+                      borderRadius: '0.75rem',
+                      fontSize: '12px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.15)'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-3 text-xs mt-1">
-            {data.devices.map((d, i) => (
-              <div key={d.device} className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                <span className="text-slate-600 dark:text-slate-300 capitalize text-[11px]">{d.device}: {d.count}</span>
-              </div>
-            ))}
+
+          {/* Accessible Legend with Icons, Names, Counts, and Percentages */}
+          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+            {(() => {
+              const totalDevices = data.devices.reduce((acc, d) => acc + d.count, 0) || 1;
+              return data.devices.map((d, i) => {
+                const pct = ((d.count / totalDevices) * 100).toFixed(0);
+                return (
+                  <div
+                    key={d.device}
+                    className="p-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-1.5"
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                      />
+                      <span className="text-slate-500 dark:text-slate-400 shrink-0">
+                        {getDeviceIcon(d.device)}
+                      </span>
+                      <span className="text-slate-800 dark:text-slate-200 capitalize text-xs font-medium truncate">
+                        {d.device}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 font-mono text-xs">
+                      <span className="text-slate-900 dark:text-white font-semibold">{d.count}</span>
+                      <span className="text-[10px] px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+                        {pct}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       </div>

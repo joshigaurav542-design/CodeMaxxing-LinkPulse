@@ -141,11 +141,12 @@ export default function ShareHubModal({ isOpen, onClose, hub }: ShareHubModalPro
 
           {/* Shareable URL Copy Box */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label htmlFor="shareable-hub-url" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               Sharable Hub URL
             </label>
             <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl focus-within:ring-2 focus-within:ring-indigo-500/30">
               <input
+                id="shareable-hub-url"
                 type="text"
                 readOnly
                 value={shareUrl}
@@ -154,6 +155,7 @@ export default function ShareHubModal({ isOpen, onClose, hub }: ShareHubModalPro
               <button
                 type="button"
                 onClick={handleCopyLink}
+                aria-label={copied ? "Sharable hub URL copied" : "Copy sharable hub URL"}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-2xs active:scale-95 ${
                   copied
                     ? 'bg-emerald-600 text-white'

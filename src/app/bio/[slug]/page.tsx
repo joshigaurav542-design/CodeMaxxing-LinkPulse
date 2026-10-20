@@ -11,7 +11,7 @@ export default async function BioPage({ params }: { params: Promise<{ slug: stri
 
   if (!bio) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white flex items-center justify-center p-4">
         <div className="text-center max-w-sm">
           <h1 className="text-xl font-bold mb-2">Profile Not Found</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">The bio page for &apos;{slug}&apos; does not exist.</p>
@@ -45,7 +45,7 @@ export default async function BioPage({ params }: { params: Promise<{ slug: stri
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 flex flex-col items-center justify-between p-6 transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col items-center justify-between p-6 transition-colors">
       <div className="w-full max-w-sm mx-auto pt-8 pb-12">
         {/* Profile Header */}
         <div className="text-center mb-7">

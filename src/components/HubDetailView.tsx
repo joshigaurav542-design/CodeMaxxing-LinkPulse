@@ -602,11 +602,14 @@ export default function HubDetailView({
               </div>
 
               <div className="flex items-center gap-2">
+                <label htmlFor="hub-detail-search" className="sr-only">Filter hub links</label>
                 <input
+                  id="hub-detail-search"
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Filter hub links..."
+                  aria-label="Filter hub links"
                   className="px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
                 {hasUserAccess && (
@@ -714,10 +717,22 @@ export default function HubDetailView({
 
                         <button
                           onClick={() => handleCopy(link.shortCode, link.id)}
-                          className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                          title="Copy Link"
+                          className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                            copiedId === link.id
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 ring-1 ring-emerald-500/30 px-2'
+                              : 'text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                          title={copiedId === link.id ? 'Copied to clipboard!' : 'Copy Link'}
+                          aria-label={copiedId === link.id ? 'Copied link to clipboard' : 'Copy link'}
                         >
-                          {copiedId === link.id ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedId === link.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Copied!</span>
+                            </>
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
                         </button>
 
                         <button

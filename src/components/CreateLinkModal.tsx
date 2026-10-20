@@ -246,10 +246,11 @@ export default function CreateLinkModal({
             /* STEP 1: DESTINATION & ALIAS */
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label htmlFor="create-destination-url" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Destination URL <span className="text-rose-500">*</span>
                 </label>
                 <input
+                  id="create-destination-url"
                   type="url"
                   value={destinationUrl}
                   onChange={(e) => setDestinationUrl(e.target.value)}
@@ -262,10 +263,11 @@ export default function CreateLinkModal({
 
               {/* Title Input */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label htmlFor="create-link-title" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Link Title (Optional)
                 </label>
                 <input
+                  id="create-link-title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -276,10 +278,11 @@ export default function CreateLinkModal({
 
               {/* Tags Input */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label htmlFor="create-link-tags" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Tags & Labels (Optional)
                 </label>
                 <input
+                  id="create-link-tags"
                   type="text"
                   value={tagsInput}
                   onChange={(e) => setTagsInput(e.target.value)}
@@ -291,7 +294,7 @@ export default function CreateLinkModal({
               {/* Custom Alias Input */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  <label htmlFor="create-custom-alias" className="text-xs font-medium text-slate-700 dark:text-slate-300">
                     Custom Back-Half / Alias
                   </label>
                   {aliasChecking && (
@@ -312,6 +315,7 @@ export default function CreateLinkModal({
                     linkpulse.io/
                   </span>
                   <input
+                    id="create-custom-alias"
                     type="text"
                     value={customAlias}
                     onChange={(e) => setCustomAlias(e.target.value)}
@@ -364,10 +368,11 @@ export default function CreateLinkModal({
 
               {/* Campaign Picker */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label htmlFor="create-campaign-select" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Assign to Campaign
                 </label>
                 <select
+                  id="create-campaign-select"
                   value={campaignId}
                   onChange={(e) => setCampaignId(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
@@ -384,14 +389,15 @@ export default function CreateLinkModal({
               {/* Password Protection */}
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <label htmlFor="create-enable-password" className="flex items-center gap-2 cursor-pointer">
                     <Lock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                     <div>
                       <h4 className="text-xs font-medium text-slate-900 dark:text-slate-200">Password Protection</h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">Require password before redirect</p>
                     </div>
-                  </div>
+                  </label>
                   <input
+                    id="create-enable-password"
                     type="checkbox"
                     checked={enablePassword}
                     onChange={(e) => setEnablePassword(e.target.checked)}
@@ -399,27 +405,33 @@ export default function CreateLinkModal({
                   />
                 </div>
                 {enablePassword && (
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter access password..."
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                  />
+                  <div>
+                    <label htmlFor="create-link-password" className="sr-only">Access password</label>
+                    <input
+                      id="create-link-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter access password..."
+                      aria-label="Access password"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                    />
+                  </div>
                 )}
               </div>
 
               {/* Scheduled Expiry */}
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <label htmlFor="create-enable-expiry" className="flex items-center gap-2 cursor-pointer">
                     <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                     <div>
                       <h4 className="text-xs font-medium text-slate-900 dark:text-slate-200">Link Expiration</h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">Auto-expire link after date</p>
                     </div>
-                  </div>
+                  </label>
                   <input
+                    id="create-enable-expiry"
                     type="checkbox"
                     checked={enableExpiry}
                     onChange={(e) => setEnableExpiry(e.target.checked)}
@@ -427,26 +439,32 @@ export default function CreateLinkModal({
                   />
                 </div>
                 {enableExpiry && (
-                  <input
-                    type="datetime-local"
-                    value={expiresAt}
-                    onChange={(e) => setExpiresAt(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                  />
+                  <div>
+                    <label htmlFor="create-expires-at" className="sr-only">Expiration date and time</label>
+                    <input
+                      id="create-expires-at"
+                      type="datetime-local"
+                      value={expiresAt}
+                      onChange={(e) => setExpiresAt(e.target.value)}
+                      aria-label="Expiration date and time"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                    />
+                  </div>
                 )}
               </div>
 
               {/* Click-Cap Limit */}
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <label htmlFor="create-enable-click-limit" className="flex items-center gap-2 cursor-pointer">
                     <Gauge className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     <div>
                       <h4 className="text-xs font-medium text-slate-900 dark:text-slate-200">Click Cap</h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">Limit max number of clicks</p>
                     </div>
-                  </div>
+                  </label>
                   <input
+                    id="create-enable-click-limit"
                     type="checkbox"
                     checked={enableClickLimit}
                     onChange={(e) => setEnableClickLimit(e.target.checked)}
@@ -454,28 +472,34 @@ export default function CreateLinkModal({
                   />
                 </div>
                 {enableClickLimit && (
-                  <input
-                    type="number"
-                    min="1"
-                    value={clickLimit}
-                    onChange={(e) => setClickLimit(e.target.value)}
-                    placeholder="e.g. 500"
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                  />
+                  <div>
+                    <label htmlFor="create-click-limit" className="sr-only">Maximum click limit</label>
+                    <input
+                      id="create-click-limit"
+                      type="number"
+                      min="1"
+                      value={clickLimit}
+                      onChange={(e) => setClickLimit(e.target.value)}
+                      placeholder="e.g. 500"
+                      aria-label="Maximum click limit"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                    />
+                  </div>
                 )}
               </div>
 
               {/* Device Targeting */}
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <label htmlFor="create-enable-device-routing" className="flex items-center gap-2 cursor-pointer">
                     <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <div>
                       <h4 className="text-xs font-medium text-slate-900 dark:text-slate-200">Device Targeting</h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">Custom URLs for iOS / Android / Desktop</p>
                     </div>
-                  </div>
+                  </label>
                   <input
+                    id="create-enable-device-routing"
                     type="checkbox"
                     checked={enableDeviceRouting}
                     onChange={(e) => setEnableDeviceRouting(e.target.checked)}
@@ -485,8 +509,9 @@ export default function CreateLinkModal({
                 {enableDeviceRouting && (
                   <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs">
                     <div>
-                      <label className="text-slate-600 dark:text-slate-400 block mb-1">iOS Destination URL:</label>
+                      <label htmlFor="create-ios-url" className="text-slate-600 dark:text-slate-400 block mb-1">iOS Destination URL:</label>
                       <input
+                        id="create-ios-url"
                         type="url"
                         value={iosUrl}
                         onChange={(e) => setIosUrl(e.target.value)}
@@ -495,8 +520,9 @@ export default function CreateLinkModal({
                       />
                     </div>
                     <div>
-                      <label className="text-slate-600 dark:text-slate-400 block mb-1">Android Destination URL:</label>
+                      <label htmlFor="create-android-url" className="text-slate-600 dark:text-slate-400 block mb-1">Android Destination URL:</label>
                       <input
+                        id="create-android-url"
                         type="url"
                         value={androidUrl}
                         onChange={(e) => setAndroidUrl(e.target.value)}
@@ -505,8 +531,9 @@ export default function CreateLinkModal({
                       />
                     </div>
                     <div>
-                      <label className="text-slate-600 dark:text-slate-400 block mb-1">Desktop Destination URL:</label>
+                      <label htmlFor="create-desktop-url" className="text-slate-600 dark:text-slate-400 block mb-1">Desktop Destination URL:</label>
                       <input
+                        id="create-desktop-url"
                         type="url"
                         value={desktopUrl}
                         onChange={(e) => setDesktopUrl(e.target.value)}

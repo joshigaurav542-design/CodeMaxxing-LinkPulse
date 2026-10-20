@@ -148,10 +148,11 @@ export default function CreateHubModal({
 
           {/* Hub Name */}
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label htmlFor="hub-name-input" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Hub Name <span className="text-rose-500">*</span>
             </label>
             <input
+              id="hub-name-input"
               type="text"
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
@@ -164,7 +165,7 @@ export default function CreateHubModal({
 
           {/* Slug Identifier */}
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label htmlFor="hub-slug-input" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Hub Slug Identifier <span className="text-rose-500">*</span>
             </label>
             <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus-within:ring-2 focus-within:ring-indigo-500/30">
@@ -172,6 +173,7 @@ export default function CreateHubModal({
                 linkpulse.io/hub/
               </span>
               <input
+                id="hub-slug-input"
                 type="text"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
@@ -187,10 +189,11 @@ export default function CreateHubModal({
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label htmlFor="hub-description-input" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Description (Optional)
             </label>
             <textarea
+              id="hub-description-input"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief summary of links collected in this hub..."
@@ -202,10 +205,11 @@ export default function CreateHubModal({
           {/* Category & Accent Color */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label htmlFor="hub-category-select" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Category
               </label>
               <select
+                id="hub-category-select"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"

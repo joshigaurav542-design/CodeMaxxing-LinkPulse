@@ -99,10 +99,15 @@ export default function QrCodeModal({ isOpen, onClose, shortUrl, title }: QrCode
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={handleCopy}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+            aria-label={copied ? "Link copied to clipboard" : "Copy short URL"}
+            className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+              copied
+                ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40 ring-2 ring-emerald-500/20'
+                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
+            }`}
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            {copied ? 'Copied' : 'Copy URL'}
+            {copied ? 'Copied!' : 'Copy URL'}
           </button>
 
           <button

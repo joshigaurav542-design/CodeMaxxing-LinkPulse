@@ -257,7 +257,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen flex flex-col font-sans">
       {/* Navigation Header */}
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-[#090d16]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 transition-colors">
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
@@ -529,7 +529,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Navigation Tabs Bar */}
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-900/80 rounded-xl max-w-fit border border-slate-200/80 dark:border-slate-800">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-900/80 rounded-xl max-w-full overflow-x-auto custom-scrollbar border border-slate-200/80 dark:border-slate-800 shrink-0">
           <button
             onClick={() => {
               setActiveTab('hubs');

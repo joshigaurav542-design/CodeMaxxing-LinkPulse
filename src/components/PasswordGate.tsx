@@ -45,7 +45,7 @@ export default function PasswordGate({ shortCode, title }: PasswordGateProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-white flex items-center justify-center p-4 transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white flex items-center justify-center p-4 transition-colors">
       <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-7 shadow-lg relative transition-all">
         <div className="text-center">
           <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-4">
@@ -65,11 +65,14 @@ export default function PasswordGate({ shortCode, title }: PasswordGateProps) {
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
+              <label htmlFor="gate-password" className="sr-only">Password</label>
               <input
+                id="gate-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
+                aria-label="Enter link password"
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all font-mono text-center tracking-widest text-sm"
                 autoFocus
               />
