@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Layers, Plus, Search, ShieldCheck, UserCheck, Globe,
   Eye, ArrowRight, Sparkles, Filter, Users, Link2, Loader2,
-  Lock, Share2
+  Lock, Share2, Check
 } from 'lucide-react';
 import { LinkHub, Link, HubRole } from '@/lib/types';
 import HubDetailView from './HubDetailView';
@@ -116,8 +116,14 @@ export default function LinkHubsView({
       if (hub.currentUserRole !== 'CONTRIBUTOR') return false;
     }
 
-    if (selectedCategory !== 'All' && hub.category !== selectedCategory) {
-      return false;
+    if (selectedCategory !== 'All') {
+      if (selectedCategory === 'Other') {
+        const standardList = ['Hackathon & Tech', 'Marketing & Sales', 'Developer Tools', 'Product Launches', 'Community & Social', 'Design & Creative', 'General'];
+        const isStandard = standardList.includes(hub.category);
+        if (isStandard && hub.category !== 'Other') return false;
+      } else if (hub.category !== selectedCategory) {
+        return false;
+      }
     }
 
     if (!search.trim()) return true;
@@ -131,7 +137,27 @@ export default function LinkHubsView({
     );
   });
 
-  const categories = ['All', ...Array.from(new Set(hubs.map((h) => h.category).filter(Boolean)))];
+  const knownCategories = [
+    'Hackathon & Tech',
+    'Marketing & Sales',
+    'Developer Tools'
+  ];
+  const dynamicCategories = Array.from(new Set(hubs.map((h) => h.category).filter(Boolean)));
+  const combinedCategories = Array.from(new Set([
+    ...knownCategories,
+    ...dynamicCategories.filter((c) => c !== 'Other')
+  ]));
+  const categories = ['All', ...combinedCategories, 'Other'];
+
+  const getCategoryCount = (c: string) => {
+    if (c === 'All') return hubs.length;
+    if (c === 'Other') {
+      return hubs.filter(
+        (h) => !h.category || h.category === 'Other' || !['Hackathon & Tech', 'Marketing & Sales', 'Developer Tools', 'Product Launches', 'Community & Social', 'Design & Creative', 'General'].includes(h.category)
+      ).length;
+    }
+    return hubs.filter((h) => h.category === c).length;
+  };
 
   // If a hub is actively selected, show its detail view!
   if (selectedHub) {
@@ -242,11 +268,59 @@ export default function LinkHubsView({
               className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
             >
               {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>{c === 'All' ? 'All Categories' : c}</option>
               ))}
             </select>
           )}
         </div>
+      </div>
+
+      {/* Category Scrollbar Bar with Check Indicators */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-0.5 custom-scrollbar">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 mr-1 pl-0.5">
+          <Filter className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+          <span>Category:</span>
+        </div>
+        {categories.map((c) => {
+          const isSelected = selectedCategory === c;
+          const count = getCategoryCount(c);
+
+          return (
+            <button
+              key={c}
+              onClick={() => setSelectedCategory(c)}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer border shadow-2xs ${
+                isSelected
+                  ? 'bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-500 dark:border-indigo-500 shadow-xs ring-2 ring-indigo-500/20'
+                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
+              }`}
+            >
+              {/* Check indicator box */}
+              <span
+                className={`w-3.5 h-3.5 rounded-md flex items-center justify-center border transition-all ${
+                  isSelected
+                    ? 'bg-white text-indigo-600 border-white'
+                    : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800'
+                }`}
+              >
+                {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+              </span>
+
+              <span>{c === 'All' ? 'All Categories' : c}</span>
+
+              {/* Count badge */}
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold transition-all ${
+                  isSelected
+                    ? 'bg-indigo-700/80 text-white'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Hubs Grid */}
