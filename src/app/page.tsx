@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Link2, Plus, UploadCloud, BarChart3, ShieldCheck,
-  Layers, Zap, Share2, Activity, Clock
+  Layers, Zap, Share2, Activity, Clock, LogIn, LogOut
 } from 'lucide-react';
 import LinksTable from '@/components/LinksTable';
 import CreateLinkModal from '@/components/CreateLinkModal';
@@ -25,6 +25,19 @@ export default function DashboardPage() {
   const [isCsvOpen, setIsCsvOpen] = useState(false);
   const [qrModalLink, setQrModalLink] = useState<Link | null>(null);
   const [selectedAnalyticsLinkId, setSelectedAnalyticsLinkId] = useState<string | undefined>(undefined);
+  const [user, setUser] = useState<{ email: string; name: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('linkpulse_user');
+      if (raw) setUser(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const handleSignOut = () => {
+    localStorage.removeItem('linkpulse_user');
+    setUser(null);
+  };
 
   const fetchData = async () => {
     try {
@@ -120,6 +133,32 @@ export default function DashboardPage() {
               <Plus className="w-4 h-4" />
               Create Link
             </button>
+
+            {user ? (
+              <div className="flex items-center gap-2 pl-1 border-l border-slate-200 dark:border-slate-800">
+                <div
+                  className="w-7 h-7 rounded-xl bg-slate-900 dark:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center uppercase shadow-2xs"
+                  title={user.email}
+                >
+                  {user.name?.charAt(0) || 'U'}
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  title="Sign Out"
+                  className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <a
+                href="/login"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-black dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Sign In
+              </a>
+            )}
           </div>
         </div>
       </header>
