@@ -84,10 +84,10 @@ export default function AnalyticsView({
     setIsRefreshing(true);
     try {
       const params = new URLSearchParams();
+      params.set('role', userRole);
       if (linkId) params.set('linkId', linkId);
       if (userRole === 'USER' && userId) {
         params.set('userId', userId);
-        params.set('role', 'USER');
       }
       const qs = params.toString() ? `?${params.toString()}` : '';
       const res = await fetch(`/api/analytics${qs}`);

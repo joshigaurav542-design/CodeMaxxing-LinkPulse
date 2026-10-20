@@ -26,9 +26,9 @@ export default function DashboardPage() {
   const [hubs, setHubs] = useState<LinkHub[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // User & RBAC state
+  // User & RBAC state (default to VISITOR on initial mount so session & role are always consistent)
   const [user, setUser] = useState<{ id?: string; email: string; name: string; role?: Role } | null>(null);
-  const [activeRole, setActiveRole] = useState<Role>('ADMIN');
+  const [activeRole, setActiveRole] = useState<Role>('VISITOR');
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [visitorAlert, setVisitorAlert] = useState<string | null>(null);
 
@@ -71,6 +71,7 @@ export default function DashboardPage() {
     setUser(null);
     setActiveRole('VISITOR');
     setActiveTab('hubs');
+    setLinks([]);
     setSelectedAnalyticsLinkId(undefined);
   };
 
@@ -86,7 +87,9 @@ export default function DashboardPage() {
   const handleRoleChange = (newRole: Role) => {
     setActiveRole(newRole);
     if (newRole === 'VISITOR') {
+      localStorage.removeItem('linkpulse_user');
       setUser(null);
+      setLinks([]);
       setActiveTab('hubs');
       setSelectedAnalyticsLinkId(undefined);
     } else if (newRole === 'USER') {
@@ -119,10 +122,12 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      // Role-based links fetching
-      const linksUrl = activeRole === 'USER' && user?.id
+      // Role-based links fetching: ADMIN gets all, USER gets scoped links, VISITOR gets public only
+      const linksUrl = activeRole === 'ADMIN'
+        ? '/api/links?role=ADMIN'
+        : activeRole === 'USER' && user?.id
         ? `/api/links?userId=${user.id}&role=USER`
-        : '/api/links?role=ADMIN';
+        : '/api/links?role=VISITOR';
 
       const hubsUrl = user?.id ? `/api/hubs?userId=${user.id}` : '/api/hubs';
 
@@ -164,7 +169,11 @@ export default function DashboardPage() {
       const res = await fetch(`/api/links/${link.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: !link.isActive })
+        body: JSON.stringify({
+          isActive: !link.isActive,
+          role: activeRole,
+          requestingUserId: user?.id
+        })
       });
       if (res.ok) {
         fetchData();
@@ -181,7 +190,9 @@ export default function DashboardPage() {
     }
 
     try {
-      const res = await fetch(`/api/links/${link.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/links/${link.id}?role=${activeRole}&userId=${user?.id || ''}`, {
+        method: 'DELETE'
+      });
       if (res.ok) {
         fetchData();
       }
@@ -472,10 +483,15 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="text-base font-semibold text-slate-900 dark:text-white truncate">
-              {user ? user.name : 'Visitor'}
+              {activeRole === 'VISITOR' || !user ? 'Guest Visitor' : user.name}
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 capitalize">
-              Role: {activeRole.toLowerCase()}
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 capitalize flex items-center gap-1.5">
+              <span>Role: {activeRole.toLowerCase()}</span>
+              {activeRole === 'VISITOR' && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300 font-semibold">
+                  View Only
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -701,6 +717,7 @@ export default function DashboardPage() {
         initialHubId={selectedHubIdForCreate}
         onLinkCreated={handleLinkCreated}
         userId={user?.id}
+        userRole={activeRole}
       />
 
       <CsvBulkUploadModal

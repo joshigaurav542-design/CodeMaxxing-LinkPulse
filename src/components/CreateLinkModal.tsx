@@ -26,6 +26,7 @@ interface CreateLinkModalProps {
   initialHubId?: string;
   onLinkCreated: (link: Link) => void;
   userId?: string;
+  userRole?: string;
 }
 
 export default function CreateLinkModal({
@@ -35,7 +36,8 @@ export default function CreateLinkModal({
   hubs = [],
   initialHubId,
   onLinkCreated,
-  userId
+  userId,
+  userRole
 }: CreateLinkModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -165,13 +167,17 @@ export default function CreateLinkModal({
         desktop: desktopUrl.trim() || undefined
       } : undefined,
       tags: tagsInput.trim() ? tagsInput.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
-      createdById: userId || undefined
+      createdById: userId || undefined,
+      role: userRole || (userId ? 'USER' : 'VISITOR')
     };
 
     try {
       const res = await fetch('/api/links', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': userRole || (userId ? 'USER' : 'VISITOR')
+        },
         body: JSON.stringify(payload)
       });
 

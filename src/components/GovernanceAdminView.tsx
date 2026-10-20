@@ -53,8 +53,11 @@ export default function GovernanceAdminView({ links, onLinksUpdated }: Governanc
     try {
       const res = await fetch('/api/governance/blocklist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: newDomain.trim(), reason: newReason.trim() })
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': 'ADMIN'
+        },
+        body: JSON.stringify({ domain: newDomain.trim(), reason: newReason.trim(), role: 'ADMIN' })
       });
       const data = await res.json();
       if (data.success) {
@@ -69,7 +72,10 @@ export default function GovernanceAdminView({ links, onLinksUpdated }: Governanc
 
   const handleRemoveDomain = async (id: string, domain: string) => {
     try {
-      await fetch(`/api/governance/blocklist?id=${id}&domain=${domain}`, { method: 'DELETE' });
+      await fetch(`/api/governance/blocklist?id=${id}&domain=${domain}&role=ADMIN`, {
+        method: 'DELETE',
+        headers: { 'x-user-role': 'ADMIN' }
+      });
       fetchBlocklist();
     } catch (e) {
       console.error(e);
@@ -82,7 +88,7 @@ export default function GovernanceAdminView({ links, onLinksUpdated }: Governanc
       const res = await fetch(`/api/links/${link.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isBanned: nextBannedState })
+        body: JSON.stringify({ isBanned: nextBannedState, role: 'ADMIN' })
       });
       if (res.ok) {
         setActionNotice({
@@ -103,8 +109,9 @@ export default function GovernanceAdminView({ links, onLinksUpdated }: Governanc
   const handleDeleteLink = async (link: Link) => {
     setDeletingId(link.id);
     try {
-      const res = await fetch(`/api/links/${link.id}`, {
-        method: 'DELETE'
+      const res = await fetch(`/api/links/${link.id}?role=ADMIN`, {
+        method: 'DELETE',
+        headers: { 'x-user-role': 'ADMIN' }
       });
       const data = await res.json();
       if (res.ok && data.success) {
