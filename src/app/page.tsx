@@ -64,21 +64,12 @@ export default function DashboardPage() {
           logSupabaseActivity(u.id, 'PAGE_VIEW', { path: '/', source: 'local_session' });
         }
       } else {
-        // Default to Gaurav Joshi (Admin) for seamless paired experience, or allow switching
-        const defaultAdmin = {
-          id: 'usr-admin-001',
-          name: 'Gaurav Joshi (Admin)',
-          email: 'gaurav.joshi@gehu.ac.in',
-          role: 'ADMIN' as Role
-        };
-        setUser(defaultAdmin);
-        setActiveRole('ADMIN');
-        try {
-          localStorage.setItem('linkpulse_user', JSON.stringify(defaultAdmin));
-        } catch {}
+        setUser(null);
+        setActiveRole('VISITOR');
       }
     } catch {
-      setActiveRole('ADMIN');
+      setUser(null);
+      setActiveRole('VISITOR');
     }
   }, []);
 
