@@ -377,6 +377,7 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
     const hub3 = 'hub-developer-03';
     const hub4 = 'hub-educonnect-04';
     const hub5 = 'hub-smartlife-05';
+    const hub6 = 'hub-fitsphere-06';
 
     const insertHubStmt = db.prepare(`
       INSERT INTO link_hubs (id, name, slug, description, color, category, admin_id, is_public, created_at, updated_at)
@@ -388,6 +389,7 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
     insertHubStmt.run(hub3, 'Developer APIs & Tooling Hub', 'dev-ecosystem', 'SDK downloads, documentation portals, Postman collections, and open-source packages.', '#06b6d4', 'Developer Tools', adminId, now, now);
     insertHubStmt.run(hub4, 'EduConnect', 'educonnect', 'Useful academic resources, online courses, tutorials, and student tools.', '#0284c7', 'Education & Learning', adminId, now, now);
     insertHubStmt.run(hub5, 'SmartLife', 'smartlife', 'Tools for budgeting, organizing tasks, managing time, and improving productivity.', '#10b981', 'Finance & Productivity', adminId, now, now);
+    insertHubStmt.run(hub6, 'FitSphere', 'fitsphere', 'Fitness education, exercise demonstrations, nutrition information, and healthy-lifestyle resources.', '#f43f5e', 'Health & Fitness', adminId, now, now);
 
     const insertMemberStmt = db.prepare(`
       INSERT OR IGNORE INTO hub_members (id, hub_id, user_id, role, created_at)
@@ -402,6 +404,8 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
     insertMemberStmt.run('mem-6', hub4, userId, 'CONTRIBUTOR', now);
     insertMemberStmt.run('mem-7', hub5, adminId, 'ADMIN', now);
     insertMemberStmt.run('mem-8', hub5, userId, 'CONTRIBUTOR', now);
+    insertMemberStmt.run('mem-9', hub6, adminId, 'ADMIN', now);
+    insertMemberStmt.run('mem-10', hub6, userId, 'CONTRIBUTOR', now);
 
     try {
       db.prepare(`UPDATE links SET hub_id = ? WHERE id IN ('lnk-hack-01', 'lnk-conf-03', 'lnk-exp-05')`).run(hub1);
@@ -410,6 +414,7 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
 
       const eduTags = JSON.stringify(['education', 'courses', 'learning']);
       const prodTags = JSON.stringify(['finance', 'productivity', 'organization']);
+      const fitTags = JSON.stringify(['fitness', 'exercise', 'nutrition']);
       const insertLinkStmt = db.prepare(`
         INSERT OR REPLACE INTO links (
           id, short_code, custom_alias, destination_url, title,
@@ -425,6 +430,10 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
       insertLinkStmt.run('lnk-prod-02', 'smart-ticktick', 'smart-ticktick', 'https://ticktick.com/', 'TickTick', 45, prodTags, 'ws-codemaxxing-001', hub5, adminId, now, now);
       insertLinkStmt.run('lnk-prod-03', 'smart-gcal', 'smart-gcal', 'https://calendar.google.com/', 'Google Calendar', 110, prodTags, 'ws-codemaxxing-001', hub5, adminId, now, now);
       insertLinkStmt.run('lnk-prod-04', 'smart-excel', 'smart-excel', 'https://www.microsoft.com/microsoft-365/excel', 'Microsoft Excel', 78, prodTags, 'ws-codemaxxing-001', hub5, adminId, now, now);
+
+      insertLinkStmt.run('lnk-fit-01', 'fit-nhs', 'fit-nhs', 'https://www.nhs.uk/live-well/exercise/', 'NHS Fitness', 64, fitTags, 'ws-codemaxxing-001', hub6, adminId, now, now);
+      insertLinkStmt.run('lnk-fit-02', 'fit-musclewiki', 'fit-musclewiki', 'https://musclewiki.com/', 'MuscleWiki', 88, fitTags, 'ws-codemaxxing-001', hub6, adminId, now, now);
+      insertLinkStmt.run('lnk-fit-03', 'fit-harvard', 'fit-harvard', 'https://nutritionsource.hsph.harvard.edu/', 'Harvard Nutrition Source', 52, fitTags, 'ws-codemaxxing-001', hub6, adminId, now, now);
     } catch {}
 
     const actStmt = db.prepare(`

@@ -145,7 +145,7 @@ export default function LinkHubsView({
 
     if (selectedCategory !== 'All') {
       if (selectedCategory === 'Other') {
-        const standardList = ['Hackathon & Tech', 'Marketing & Sales', 'Developer Tools', 'Education & Learning', 'Finance & Productivity', 'Product Launches', 'Community & Social', 'Design & Creative', 'General'];
+        const standardList = ['Hackathon & Tech', 'Marketing & Sales', 'Developer Tools', 'Education & Learning', 'Finance & Productivity', 'Health & Fitness', 'Product Launches', 'Community & Social', 'Design & Creative', 'General'];
         const isStandard = standardList.includes(hub.category);
         if (isStandard && hub.category !== 'Other') return false;
       } else if (hub.category !== selectedCategory) {
@@ -165,6 +165,7 @@ export default function LinkHubsView({
   });
 
   const knownCategories = [
+    'Health & Fitness',
     'Education & Learning',
     'Finance & Productivity',
     'Hackathon & Tech',
@@ -182,7 +183,7 @@ export default function LinkHubsView({
     if (c === 'All') return hubs.length;
     if (c === 'Other') {
       return hubs.filter(
-        (h) => !h.category || h.category === 'Other' || !['Education & Learning', 'Finance & Productivity', 'Hackathon & Tech', 'Marketing & Sales', 'Developer Tools', 'Product Launches', 'Community & Social', 'Design & Creative', 'General'].includes(h.category)
+        (h) => !h.category || h.category === 'Other' || !['Health & Fitness', 'Education & Learning', 'Finance & Productivity', 'Hackathon & Tech', 'Marketing & Sales', 'Developer Tools', 'Product Launches', 'Community & Social', 'Design & Creative', 'General'].includes(h.category)
       ).length;
     }
     return hubs.filter((h) => h.category === c).length;
