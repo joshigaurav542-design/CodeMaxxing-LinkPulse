@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Link2, Plus, UploadCloud, BarChart3, ShieldCheck,
-  Layers, Zap, Share2, Activity, Clock, LogIn, LogOut,
+  Layers, Zap, Activity, Clock, LogIn, LogOut,
   Globe, UserCheck, ShieldAlert, AlertCircle, Info, Lock,
   Sparkles, ArrowRight
 } from 'lucide-react';
@@ -259,16 +259,6 @@ export default function DashboardPage() {
             </button>
 
             <ThemeToggle />
-
-            <a
-              href="/bio/codemaxxing"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition cursor-pointer shadow-2xs"
-            >
-              <Share2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-              Bio Page
-            </a>
 
             <button
               onClick={handleOpenCsvModal}
