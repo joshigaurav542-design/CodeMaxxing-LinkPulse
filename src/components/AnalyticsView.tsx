@@ -48,6 +48,11 @@ export default function AnalyticsView({
   }, []);
 
   const fetchAnalytics = async () => {
+    if (userRole === 'VISITOR') {
+      setLoading(false);
+      return;
+    }
+
     setIsRefreshing(true);
     try {
       const params = new URLSearchParams();
@@ -73,6 +78,28 @@ export default function AnalyticsView({
   useEffect(() => {
     fetchAnalytics();
   }, [linkId, userId, userRole]);
+
+  if (userRole === 'VISITOR') {
+    return (
+      <div className="p-8 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center max-w-md mx-auto shadow-2xs space-y-3">
+        <div className="w-11 h-11 rounded-xl bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-500/20 flex items-center justify-center mx-auto">
+          <Shield className="w-5 h-5" />
+        </div>
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Analytics Restricted</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          Visitors can only view and test short links. Sign in as a User to view personal analytics or Admin for platform telemetry.
+        </p>
+        <div className="pt-2">
+          <a
+            href="/login"
+            className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition cursor-pointer shadow-xs"
+          >
+            Sign In to View Analytics
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !data) {
     return (

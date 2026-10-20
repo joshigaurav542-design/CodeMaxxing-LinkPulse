@@ -55,12 +55,16 @@ export default function DashboardPage() {
     localStorage.removeItem('linkpulse_user');
     setUser(null);
     setActiveRole('VISITOR');
+    setActiveTab('links');
+    setSelectedAnalyticsLinkId(undefined);
   };
 
   const handleRoleChange = (newRole: Role) => {
     setActiveRole(newRole);
     if (newRole === 'VISITOR') {
       setUser(null);
+      setActiveTab('links');
+      setSelectedAnalyticsLinkId(undefined);
     } else if (newRole === 'USER' && !user) {
       setUser({
         id: 'usr-marketer-002',
@@ -68,6 +72,9 @@ export default function DashboardPage() {
         email: 'team.lead@codemaxxing.dev',
         role: 'USER'
       });
+      if (activeTab === 'governance') {
+        setActiveTab('links');
+      }
     } else if (newRole === 'ADMIN' && !user) {
       setUser({
         id: 'usr-admin-001',
@@ -331,29 +338,42 @@ export default function DashboardPage() {
           <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
               <span className="text-xs font-medium">
-                {activeRole === 'USER' ? 'Your Links' : 'Active Links'}
+                {activeRole === 'USER' ? 'Your Links' : activeRole === 'VISITOR' ? 'Public Links' : 'Active Links'}
               </span>
               <Layers className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
             </div>
             <div className="text-base font-semibold text-slate-900 dark:text-white">{links.length}</div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              {activeRole === 'USER' ? 'Managed by you' : 'Platform routes'}
+              {activeRole === 'USER' ? 'Managed by you' : activeRole === 'VISITOR' ? 'Available to browse' : 'Platform routes'}
             </p>
           </div>
 
           <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
-              <span className="text-xs font-medium">
-                {activeRole === 'USER' ? 'Your Traffic' : 'Total Traffic'}
-              </span>
-              <Activity className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
-            </div>
-            <div className="text-base font-semibold text-slate-900 dark:text-white">
-              {totalClicksAcrossLinks.toLocaleString()}
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              {activeRole === 'USER' ? 'Clicks on your links' : 'Tracked redirects'}
-            </p>
+            {activeRole === 'VISITOR' ? (
+              <>
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
+                  <span className="text-xs font-medium">Access Scope</span>
+                  <Globe className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+                </div>
+                <div className="text-base font-semibold text-slate-900 dark:text-white">Read-Only</div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Open links & passwords</p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1.5">
+                  <span className="text-xs font-medium">
+                    {activeRole === 'USER' ? 'Your Traffic' : 'Total Traffic'}
+                  </span>
+                  <Activity className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                </div>
+                <div className="text-base font-semibold text-slate-900 dark:text-white">
+                  {totalClicksAcrossLinks.toLocaleString()}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {activeRole === 'USER' ? 'Clicks on your links' : 'Tracked redirects'}
+                </p>
+              </>
+            )}
           </div>
 
           <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
@@ -376,54 +396,66 @@ export default function DashboardPage() {
         </div>
 
         {/* View Switcher Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-900/80 rounded-xl max-w-fit border border-slate-200/80 dark:border-slate-800">
-          <button
-            onClick={() => {
-              setActiveTab('links');
-              setSelectedAnalyticsLinkId(undefined);
-            }}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition cursor-pointer ${
-              activeTab === 'links'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Link2 className="w-3.5 h-3.5" />
-            Links ({links.length})
-          </button>
+        {activeRole !== 'VISITOR' ? (
+          <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-900/80 rounded-xl max-w-fit border border-slate-200/80 dark:border-slate-800">
+            <button
+              onClick={() => {
+                setActiveTab('links');
+                setSelectedAnalyticsLinkId(undefined);
+              }}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition cursor-pointer ${
+                activeTab === 'links'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              Links ({links.length})
+            </button>
 
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition cursor-pointer ${
-              activeTab === 'analytics'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            Analytics
-            {activeRole === 'USER' && (
-              <span className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
-                Own
-              </span>
-            )}
-          </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition cursor-pointer ${
+                activeTab === 'analytics'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Analytics
+              {activeRole === 'USER' && (
+                <span className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
+                  Own
+                </span>
+              )}
+            </button>
 
-          <button
-            onClick={() => setActiveTab('governance')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition cursor-pointer ${
-              activeTab === 'governance'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Governance
-            {activeRole !== 'ADMIN' && (
-              <Lock className="w-3 h-3 text-slate-400 ml-0.5" />
-            )}
-          </button>
-        </div>
+            <button
+              onClick={() => setActiveTab('governance')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition cursor-pointer ${
+                activeTab === 'governance'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Governance
+              {activeRole !== 'ADMIN' && (
+                <Lock className="w-3 h-3 text-slate-400 ml-0.5" />
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-900 dark:text-white shadow-2xs">
+              <Link2 className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Public Links ({links.length})</span>
+            </div>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              Visitor mode: analytics and management access are hidden.
+            </span>
+          </div>
+        )}
 
         {/* Tab 1: Links Management Hub */}
         {activeTab === 'links' && (
@@ -454,12 +486,14 @@ export default function DashboardPage() {
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mb-2">
                       {camp.description}
                     </p>
-                    <div className="flex items-baseline justify-between text-xs">
-                      <span className="text-slate-500 dark:text-slate-400 text-[11px]">Traffic</span>
-                      <span className="font-mono text-xs font-semibold text-slate-900 dark:text-white">
-                        {(camp.totalClicks || 0).toLocaleString()} clicks
-                      </span>
-                    </div>
+                    {activeRole !== 'VISITOR' && (
+                      <div className="flex items-baseline justify-between text-xs">
+                        <span className="text-slate-500 dark:text-slate-400 text-[11px]">Traffic</span>
+                        <span className="font-mono text-xs font-semibold text-slate-900 dark:text-white">
+                          {(camp.totalClicks || 0).toLocaleString()} clicks
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -495,7 +529,7 @@ export default function DashboardPage() {
         )}
 
         {/* Tab 2: Live Analytics & Recharts */}
-        {activeTab === 'analytics' && (
+        {activeTab === 'analytics' && activeRole !== 'VISITOR' && (
           <div className="space-y-4">
             {selectedAnalyticsLinkId && (
               <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-900 dark:text-indigo-300 text-xs">

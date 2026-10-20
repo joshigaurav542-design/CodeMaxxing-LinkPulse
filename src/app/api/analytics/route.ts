@@ -9,6 +9,13 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get('userId') || undefined;
     const role = searchParams.get('role');
 
+    if (role === 'VISITOR') {
+      return NextResponse.json(
+        { success: false, error: 'Visitors do not have access to analytics. Please sign in.' },
+        { status: 403 }
+      );
+    }
+
     // Role-based visibility: 'USER' views analytics for own links only; 'ADMIN' views platform-wide
     const scopeUserId = role === 'USER' && userId ? userId : undefined;
     const data = getAnalyticsOverview(linkId, scopeUserId);

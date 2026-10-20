@@ -128,14 +128,14 @@ export default function LinksTable({
                 <th className="py-3 px-4">Destination</th>
                 <th className="py-3 px-4">Rules</th>
                 <th className="py-3 px-4">Campaign</th>
-                <th className="py-3 px-4 text-right">Traffic</th>
+                {userRole !== 'VISITOR' && <th className="py-3 px-4 text-right">Traffic</th>}
                 <th className="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
               {filteredLinks.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                  <td colSpan={userRole === 'VISITOR' ? 5 : 6} className="py-12 text-center text-slate-400">
                     No matching links found. Create your first link using the wizard!
                   </td>
                 </tr>
@@ -167,23 +167,35 @@ export default function LinksTable({
                                 Capped
                               </span>
                             ) : !link.isActive ? (
-                              <button
-                                type="button"
-                                onClick={() => onToggleActive(link)}
-                                className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition cursor-pointer"
-                                title="Paused — click to make Live"
-                              >
-                                Paused
-                              </button>
+                              userRole === 'VISITOR' ? (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                  Paused
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => onToggleActive(link)}
+                                  className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition cursor-pointer"
+                                  title="Paused — click to make Live"
+                                >
+                                  Paused
+                                </button>
+                              )
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => onToggleActive(link)}
-                                className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 transition cursor-pointer"
-                                title="Live — click to Pause"
-                              >
-                                Live
-                              </button>
+                              userRole === 'VISITOR' ? (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                                  Live
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => onToggleActive(link)}
+                                  className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 transition cursor-pointer"
+                                  title="Live — click to Pause"
+                                >
+                                  Live
+                                </button>
+                              )
                             )}
                           </div>
                           {link.title && (
@@ -260,12 +272,14 @@ export default function LinksTable({
                         )}
                       </td>
 
-                      {/* Clicks */}
-                      <td className="py-3 px-4 text-right">
-                        <span className="font-mono text-xs font-semibold text-slate-900 dark:text-white">
-                          {link.clickCount.toLocaleString()}
-                        </span>
-                      </td>
+                      {/* Clicks (Hidden for Visitors) */}
+                      {userRole !== 'VISITOR' && (
+                        <td className="py-3 px-4 text-right">
+                          <span className="font-mono text-xs font-semibold text-slate-900 dark:text-white">
+                            {link.clickCount.toLocaleString()}
+                          </span>
+                        </td>
+                      )}
 
                       {/* Actions */}
                       <td className="py-3 px-4 text-center">
@@ -296,13 +310,16 @@ export default function LinksTable({
                             <QrCode className="w-3.5 h-3.5" />
                           </button>
 
-                          <button
-                            onClick={() => onSelectLinkAnalytics(link.id)}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
-                            title="Analytics"
-                          >
-                            <BarChart3 className="w-3.5 h-3.5" />
-                          </button>
+                          {/* Analytics button (Hidden for Visitors) */}
+                          {userRole !== 'VISITOR' && (
+                            <button
+                              onClick={() => onSelectLinkAnalytics(link.id)}
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
+                              title="Analytics"
+                            >
+                              <BarChart3 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
 
                           {onDeleteLink && userRole !== 'VISITOR' && (
                             confirmDeleteId === link.id ? (
