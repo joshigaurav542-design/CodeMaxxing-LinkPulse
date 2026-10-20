@@ -15,6 +15,7 @@ interface CreateHubModalProps {
 
 const CATEGORIES = [
   'General',
+  'Education & Learning',
   'Hackathon & Tech',
   'Marketing & Sales',
   'Developer Tools',

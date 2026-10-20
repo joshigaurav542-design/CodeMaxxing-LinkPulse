@@ -375,6 +375,7 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
     const hub1 = 'hub-innovista-01';
     const hub2 = 'hub-growth-02';
     const hub3 = 'hub-developer-03';
+    const hub4 = 'hub-educonnect-04';
 
     const insertHubStmt = db.prepare(`
       INSERT INTO link_hubs (id, name, slug, description, color, category, admin_id, is_public, created_at, updated_at)
@@ -384,6 +385,7 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
     insertHubStmt.run(hub1, 'Innovista 2026 Hackathon Hub', 'innovista-2026', 'Official presentation links, demo portal, and project documentation for Innovista 2026.', '#6366f1', 'Hackathon & Tech', adminId, now, now);
     insertHubStmt.run(hub2, 'Growth & Product Marketing Hub', 'global-growth', 'Affiliate promotions, social blitz links, flash coupons, and partner landing pages.', '#10b981', 'Marketing & Sales', userId, now, now);
     insertHubStmt.run(hub3, 'Developer APIs & Tooling Hub', 'dev-ecosystem', 'SDK downloads, documentation portals, Postman collections, and open-source packages.', '#06b6d4', 'Developer Tools', adminId, now, now);
+    insertHubStmt.run(hub4, 'EduConnect', 'educonnect', 'Useful academic resources, online courses, tutorials, and student tools.', '#0284c7', 'Education & Learning', adminId, now, now);
 
     const insertMemberStmt = db.prepare(`
       INSERT OR IGNORE INTO hub_members (id, hub_id, user_id, role, created_at)
@@ -394,11 +396,25 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
     insertMemberStmt.run('mem-2', hub1, userId, 'CONTRIBUTOR', now);
     insertMemberStmt.run('mem-3', hub2, userId, 'ADMIN', now);
     insertMemberStmt.run('mem-4', hub3, adminId, 'ADMIN', now);
+    insertMemberStmt.run('mem-5', hub4, adminId, 'ADMIN', now);
+    insertMemberStmt.run('mem-6', hub4, userId, 'CONTRIBUTOR', now);
 
     try {
       db.prepare(`UPDATE links SET hub_id = ? WHERE id IN ('lnk-hack-01', 'lnk-conf-03', 'lnk-exp-05')`).run(hub1);
       db.prepare(`UPDATE links SET hub_id = ? WHERE id IN ('lnk-flash-04')`).run(hub2);
       db.prepare(`UPDATE links SET hub_id = ? WHERE id IN ('lnk-app-02')`).run(hub3);
+
+      const tags = JSON.stringify(['education', 'courses', 'learning']);
+      const insertLinkStmt = db.prepare(`
+        INSERT OR REPLACE INTO links (
+          id, short_code, custom_alias, destination_url, title,
+          is_active, is_banned, click_count, tags, workspace_id, hub_id, created_by_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      insertLinkStmt.run('lnk-edu-01', 'edu-yt', 'edu-yt', 'https://www.youtube.com/', 'YouTube', 38, tags, 'ws-codemaxxing-001', hub4, adminId, now, now);
+      insertLinkStmt.run('lnk-edu-02', 'edu-khan', 'edu-khan', 'https://www.khanacademy.org/', 'Khan Academy', 54, tags, 'ws-codemaxxing-001', hub4, adminId, now, now);
+      insertLinkStmt.run('lnk-edu-03', 'edu-gfg', 'edu-gfg', 'https://www.geeksforgeeks.org/', 'GeeksforGeeks', 82, tags, 'ws-codemaxxing-001', hub4, adminId, now, now);
+      insertLinkStmt.run('lnk-edu-04', 'edu-coursera', 'edu-coursera', 'https://www.coursera.org/', 'Coursera', 67, tags, 'ws-codemaxxing-001', hub4, adminId, now, now);
     } catch {}
 
     const actStmt = db.prepare(`
