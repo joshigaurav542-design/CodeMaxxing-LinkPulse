@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateLinkStatus, getAllLinks } from '@/lib/db';
+import { updateLinkStatus, getLinkById, deleteLink } from '@/lib/db';
 import { getCache } from '@/lib/cache';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -8,8 +8,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json();
     const { isActive, isBanned } = body;
 
-    const allLinks = getAllLinks();
-    const targetLink = allLinks.find((l) => l.id === id);
+    const targetLink = getLinkById(id);
 
     if (!targetLink) {
       return NextResponse.json({ success: false, error: 'Link not found' }, { status: 404 });
@@ -30,3 +29,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const targetLink = getLinkById(id);
+
+    if (!targetLink) {
+      return NextResponse.json({ success: false, error: 'Link not found' }, { status: 404 });
+    }
+
+    deleteLink(id);
+
+    // Invalidate Redis Hot-Path Cache immediately
+    const cache = getCache();
+    cache.invalidate(targetLink.shortCode, targetLink.customAlias);
+
+    return NextResponse.json({
+      success: true,
+      message: `Link /${targetLink.customAlias || targetLink.shortCode} removed permanently from website`,
+      linkId: id
+    });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+

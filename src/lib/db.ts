@@ -404,6 +404,26 @@ export function updateLinkStatus(id: string, updates: { isActive?: boolean; isBa
   db.prepare(`UPDATE links SET ${sets.join(', ')} WHERE id = ?`).run(...args);
 }
 
+export function getLinkById(id: string): Link | null {
+  const db = getDatabase();
+  const row = db.prepare(`
+    SELECT l.*, c.name as campaign_name, c.color as campaign_color
+    FROM links l
+    LEFT JOIN campaigns c ON l.campaign_id = c.id
+    WHERE l.id = ?
+  `).get(id) as any;
+
+  if (!row) return null;
+  return mapLinkRow(row);
+}
+
+export function deleteLink(id: string): boolean {
+  const db = getDatabase();
+  const info = db.prepare('DELETE FROM links WHERE id = ?').run(id);
+  return Number(info.changes) > 0;
+}
+
+
 export function incrementLinkClickCount(id: string): void {
   const db = getDatabase();
   db.prepare('UPDATE links SET click_count = click_count + 1 WHERE id = ?').run(id);
