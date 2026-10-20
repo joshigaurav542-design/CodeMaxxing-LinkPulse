@@ -69,11 +69,15 @@ function getDeviceIcon(device: string) {
 export default function AnalyticsView({
   linkId,
   userId,
-  userRole = 'ADMIN'
+  userRole = 'ADMIN',
+  hubId,
+  hubName
 }: {
   linkId?: string;
   userId?: string;
   userRole?: 'VISITOR' | 'USER' | 'ADMIN';
+  hubId?: string;
+  hubName?: string;
 }) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,6 +105,7 @@ export default function AnalyticsView({
       const params = new URLSearchParams();
       params.set('role', userRole);
       if (linkId) params.set('linkId', linkId);
+      if (hubId) params.set('hubId', hubId);
       if (userRole === 'USER' && userId) {
         params.set('userId', userId);
       }
@@ -120,7 +125,7 @@ export default function AnalyticsView({
 
   useEffect(() => {
     fetchAnalytics();
-  }, [linkId, userId, userRole]);
+  }, [linkId, userId, userRole, hubId]);
 
   if (userRole === 'VISITOR') {
     return (

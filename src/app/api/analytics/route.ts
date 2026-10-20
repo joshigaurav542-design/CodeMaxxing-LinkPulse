@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const linkId = searchParams.get('linkId') || undefined;
     const userId = searchParams.get('userId') || undefined;
+    const hubId = searchParams.get('hubId') || undefined;
     const role = searchParams.get('role');
 
     // Server-side RBAC enforcement: Visitors or unauthenticated callers cannot access analytics
@@ -17,9 +18,9 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Role-based visibility: 'USER' views analytics for own links only; 'ADMIN' views platform-wide
+    // Role-based visibility: 'USER' views analytics for own links only; 'ADMIN' views platform-wide or hub-specific
     const scopeUserId = role === 'USER' && userId ? userId : undefined;
-    const data = getAnalyticsOverview(linkId, scopeUserId);
+    const data = getAnalyticsOverview(linkId, scopeUserId, hubId);
     const cacheStats = getCache().getStats();
 
     return NextResponse.json({

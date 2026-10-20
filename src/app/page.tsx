@@ -11,7 +11,6 @@ import LinksTable from '@/components/LinksTable';
 import CreateLinkModal from '@/components/CreateLinkModal';
 import CsvBulkUploadModal from '@/components/CsvBulkUploadModal';
 import QrCodeModal from '@/components/QrCodeModal';
-import AnalyticsView from '@/components/AnalyticsView';
 import GovernanceAdminView from '@/components/GovernanceAdminView';
 import LinkHubsView from '@/components/LinkHubsView';
 import ActivityView from '@/components/ActivityView';
@@ -21,7 +20,7 @@ import { Link, Campaign, Role, LinkHub } from '@/lib/types';
 import { logSupabaseActivity } from '@/lib/supabaseClient';
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<'hubs' | 'links' | 'analytics' | 'activity' | 'governance'>('hubs');
+  const [activeTab, setActiveTab] = useState<'hubs' | 'links' | 'activity' | 'governance'>('hubs');
   const [links, setLinks] = useState<Link[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [hubs, setHubs] = useState<LinkHub[]>([]);
@@ -38,7 +37,6 @@ export default function DashboardPage() {
   const [selectedHubIdForCreate, setSelectedHubIdForCreate] = useState<string | undefined>(undefined);
   const [isCsvOpen, setIsCsvOpen] = useState(false);
   const [qrModalLink, setQrModalLink] = useState<Link | null>(null);
-  const [selectedAnalyticsLinkId, setSelectedAnalyticsLinkId] = useState<string | undefined>(undefined);
 
   // Check stored user session on mount
   useEffect(() => {
@@ -83,7 +81,6 @@ export default function DashboardPage() {
     setActiveRole('VISITOR');
     setActiveTab('hubs');
     setLinks([]);
-    setSelectedAnalyticsLinkId(undefined);
   };
 
   const handleQuickSignIn = (selectedUser: { id: string; email: string; name: string; role: Role }) => {
@@ -102,7 +99,6 @@ export default function DashboardPage() {
       setUser(null);
       setLinks([]);
       setActiveTab('hubs');
-      setSelectedAnalyticsLinkId(undefined);
     } else if (newRole === 'USER') {
       const u = {
         id: 'usr-marketer-002',
@@ -531,10 +527,7 @@ export default function DashboardPage() {
         {/* Navigation Tabs Bar */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-900/80 rounded-xl max-w-full overflow-x-auto custom-scrollbar border border-slate-200/80 dark:border-slate-800 shrink-0">
           <button
-            onClick={() => {
-              setActiveTab('hubs');
-              setSelectedAnalyticsLinkId(undefined);
-            }}
+            onClick={() => setActiveTab('hubs')}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
               activeTab === 'hubs'
                 ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
@@ -546,10 +539,7 @@ export default function DashboardPage() {
           </button>
 
           <button
-            onClick={() => {
-              setActiveTab('links');
-              setSelectedAnalyticsLinkId(undefined);
-            }}
+            onClick={() => setActiveTab('links')}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
               activeTab === 'links'
                 ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
@@ -559,20 +549,6 @@ export default function DashboardPage() {
             <Link2 className="w-3.5 h-3.5" />
             All Links ({links.length})
           </button>
-
-          {activeRole !== 'VISITOR' && (
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition cursor-pointer ${
-                activeTab === 'analytics'
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              Analytics
-            </button>
-          )}
 
           <button
             onClick={() => setActiveTab('activity')}
@@ -655,34 +631,8 @@ export default function DashboardPage() {
               links={links}
               campaigns={campaigns}
               onOpenQr={(link) => setQrModalLink(link)}
-              onSelectLinkAnalytics={(id) => {
-                setSelectedAnalyticsLinkId(id);
-                setActiveTab('analytics');
-              }}
               onToggleActive={handleToggleActive}
               onDeleteLink={handleDeleteLink}
-              userRole={activeRole}
-            />
-          </div>
-        )}
-
-        {/* TAB 2: ANALYTICS */}
-        {activeTab === 'analytics' && activeRole !== 'VISITOR' && (
-          <div className="space-y-4">
-            {selectedAnalyticsLinkId && (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-900 dark:text-indigo-300 text-xs">
-                <span>Filtering metrics for link: <strong className="font-mono font-medium">{selectedAnalyticsLinkId}</strong></span>
-                <button
-                  onClick={() => setSelectedAnalyticsLinkId(undefined)}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium cursor-pointer text-xs"
-                >
-                  View All Metrics
-                </button>
-              </div>
-            )}
-            <AnalyticsView
-              linkId={selectedAnalyticsLinkId}
-              userId={user?.id}
               userRole={activeRole}
             />
           </div>

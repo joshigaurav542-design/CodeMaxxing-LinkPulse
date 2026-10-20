@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { LinkHub, Link, HubMember, HubRole } from '@/lib/types';
 import ShareHubModal from './ShareHubModal';
+import AnalyticsView from './AnalyticsView';
 
 interface HubDetailViewProps {
   hub: LinkHub;
@@ -29,7 +30,7 @@ export default function HubDetailView({
   onHubUpdated,
   onDeleteHub
 }: HubDetailViewProps) {
-  const [viewMode, setViewMode] = useState<'visitor' | 'management'>('management');
+  const [viewMode, setViewMode] = useState<'visitor' | 'management' | 'analytics'>('management');
   const [links, setLinks] = useState<Link[]>([]);
   const [members, setMembers] = useState<HubMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -224,7 +225,7 @@ export default function HubDetailView({
           <span>Back to All Link Hubs</span>
         </button>
 
-        {/* View Mode Toggle: Visitor View vs Management View */}
+        {/* View Mode Toggle: Visitor View vs Management View vs Hub Analytics */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-900 rounded-xl max-w-fit border border-slate-200 dark:border-slate-800">
           <button
             onClick={() => setViewMode('management')}
@@ -248,6 +249,22 @@ export default function HubDetailView({
             <Eye className="w-3.5 h-3.5" />
             View as Visitor
           </button>
+          {isHubAdmin && (
+            <button
+              onClick={() => setViewMode('analytics')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                viewMode === 'analytics'
+                  ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <BarChart2 className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Hub Analytics</span>
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+                Admin
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -370,6 +387,21 @@ export default function HubDetailView({
               >
                 <Plus className="w-4 h-4" />
                 Add Link to Hub
+              </button>
+            )}
+
+            {isHubAdmin && (
+              <button
+                onClick={() => setViewMode(viewMode === 'analytics' ? 'management' : 'analytics')}
+                className={`px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 ${
+                  viewMode === 'analytics'
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30'
+                }`}
+                title="View Hub Analytics (Admin Only)"
+              >
+                <BarChart2 className="w-3.5 h-3.5" />
+                <span>{viewMode === 'analytics' ? 'Exit Analytics' : 'Hub Analytics'}</span>
               </button>
             )}
 
@@ -521,6 +553,45 @@ export default function HubDetailView({
             </div>
           )}
         </div>
+      ) : viewMode === 'analytics' ? (
+        /* HUB ANALYTICS MODE (ADMIN ONLY) */
+        isHubAdmin ? (
+          <div className="space-y-4">
+            <div className="p-4 sm:px-6 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/10 border border-indigo-200/80 dark:border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 text-xs text-indigo-950 dark:text-indigo-200">
+                <BarChart2 className="w-5 h-5 text-indigo-600 shrink-0" />
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-white">
+                    Hub Performance & Click Telemetry
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Analytics for links in <strong>{hub.name}</strong> (/hub/{hub.slug}). Visible exclusively to the Hub Admin.
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 text-[11px] font-bold shrink-0 self-start sm:self-auto">
+                👑 Admin View
+              </span>
+            </div>
+
+            <AnalyticsView
+              hubId={hub.id}
+              hubName={hub.name}
+              userId={currentUser?.id}
+              userRole="ADMIN"
+            />
+          </div>
+        ) : (
+          <div className="p-8 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center max-w-md mx-auto shadow-2xs space-y-3">
+            <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center mx-auto">
+              <Lock className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Hub Analytics Restricted</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Hub analytics are only visible to the designated Hub Administrator (👑 {hub.adminName || 'Admin'}).
+            </p>
+          </div>
+        )
       ) : (
         /* MANAGEMENT & COLLABORATION MODE */
         <div className="space-y-5">

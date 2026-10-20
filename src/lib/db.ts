@@ -821,7 +821,7 @@ export function getLinkInBio(slug: string): LinkInBio | null {
   };
 }
 
-export function getAnalyticsOverview(linkId?: string, userId?: string) {
+export function getAnalyticsOverview(linkId?: string, userId?: string, hubId?: string) {
   const db = getDatabase();
 
   const whereClauses: string[] = [];
@@ -835,6 +835,11 @@ export function getAnalyticsOverview(linkId?: string, userId?: string) {
   if (userId) {
     whereClauses.push('link_id IN (SELECT id FROM links WHERE created_by_id = ?)');
     args.push(userId);
+  }
+
+  if (hubId) {
+    whereClauses.push('link_id IN (SELECT id FROM links WHERE hub_id = ?)');
+    args.push(hubId);
   }
 
   const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -861,17 +866,11 @@ export function getAnalyticsOverview(linkId?: string, userId?: string) {
     LIMIT 30
   `).all(...args) as any[];
 
-  const baseWhere = linkId ? 'WHERE link_id = ? AND is_bot = 0' : 'WHERE is_bot = 0';
-
   // Top Countries
   const countries = db.prepare(`
     SELECT country, COUNT(*) as count
-<<<<<<< HEAD
     FROM click_events
-    ${baseWhere} AND country IS NOT NULL AND country != ''
-=======
-    FROM click_events ${humanWhere}
->>>>>>> 40f1a20 (feat: implement RBAC user roles matrix, secure SQLite database auth, and link tag management)
+    ${humanWhere} AND country IS NOT NULL AND country != ''
     GROUP BY country
     ORDER BY count DESC
     LIMIT 10
@@ -881,7 +880,7 @@ export function getAnalyticsOverview(linkId?: string, userId?: string) {
   const cities = db.prepare(`
     SELECT city, country, COUNT(*) as count
     FROM click_events
-    ${baseWhere} AND city IS NOT NULL AND city != ''
+    ${humanWhere} AND city IS NOT NULL AND city != ''
     GROUP BY city, country
     ORDER BY count DESC
     LIMIT 10
@@ -891,7 +890,7 @@ export function getAnalyticsOverview(linkId?: string, userId?: string) {
   const recentLocations = db.prepare(`
     SELECT id, country, city, timestamp, device_type, os, browser, referrer
     FROM click_events
-    ${baseWhere} AND country IS NOT NULL AND country != ''
+    ${humanWhere} AND country IS NOT NULL AND country != ''
     ORDER BY timestamp DESC
     LIMIT 10
   `).all(...args) as any[];
@@ -899,12 +898,8 @@ export function getAnalyticsOverview(linkId?: string, userId?: string) {
   // Device Breakdown
   const devices = db.prepare(`
     SELECT device_type, COUNT(*) as count
-<<<<<<< HEAD
     FROM click_events
-    ${baseWhere}
-=======
-    FROM click_events ${humanWhere}
->>>>>>> 40f1a20 (feat: implement RBAC user roles matrix, secure SQLite database auth, and link tag management)
+    ${humanWhere}
     GROUP BY device_type
     ORDER BY count DESC
   `).all(...args) as any[];
@@ -912,12 +907,8 @@ export function getAnalyticsOverview(linkId?: string, userId?: string) {
   // OS Breakdown
   const os = db.prepare(`
     SELECT os, COUNT(*) as count
-<<<<<<< HEAD
     FROM click_events
-    ${baseWhere}
-=======
-    FROM click_events ${humanWhere}
->>>>>>> 40f1a20 (feat: implement RBAC user roles matrix, secure SQLite database auth, and link tag management)
+    ${humanWhere}
     GROUP BY os
     ORDER BY count DESC
     LIMIT 5
@@ -926,12 +917,8 @@ export function getAnalyticsOverview(linkId?: string, userId?: string) {
   // Referrers
   const referrers = db.prepare(`
     SELECT referrer, COUNT(*) as count
-<<<<<<< HEAD
     FROM click_events
-    ${baseWhere}
-=======
-    FROM click_events ${humanWhere}
->>>>>>> 40f1a20 (feat: implement RBAC user roles matrix, secure SQLite database auth, and link tag management)
+    ${humanWhere}
     GROUP BY referrer
     ORDER BY count DESC
     LIMIT 6

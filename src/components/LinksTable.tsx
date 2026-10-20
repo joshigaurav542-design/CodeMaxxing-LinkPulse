@@ -12,7 +12,7 @@ interface LinksTableProps {
   links: Link[];
   campaigns: Campaign[];
   onOpenQr: (link: Link) => void;
-  onSelectLinkAnalytics: (linkId: string) => void;
+  onSelectLinkAnalytics?: (linkId: string) => void;
   onToggleActive: (link: Link) => void;
   onDeleteLink?: (link: Link) => void;
   userRole?: Role;
@@ -331,8 +331,8 @@ export default function LinksTable({
                             <QrCode className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Analytics button (Hidden for Visitors) */}
-                          {userRole !== 'VISITOR' && (
+                          {/* Analytics button (Hidden for Visitors or when onSelectLinkAnalytics is omitted) */}
+                          {userRole !== 'VISITOR' && onSelectLinkAnalytics && (
                             <button
                               onClick={() => onSelectLinkAnalytics(link.id)}
                               className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
