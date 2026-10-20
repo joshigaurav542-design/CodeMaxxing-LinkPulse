@@ -129,39 +129,25 @@ flowchart TD
 
 ## 📸 Screenshots & Visual Tour
 
-> 💡 *Save your captured screenshots inside the `/screenshots/` folder matching the filenames below.*
-
 ### 1. Link Hubs Workspace Directory
-*Categorized hubs with real-time counters, tag filters, search, and role indicators.*
-![Link Hubs Directory](./screenshots/01-link-hubs-home.png)
+*Categorized link hubs with real-time counters, category navigation bar, search, and member access badges.*
+![Link Hubs Directory](./screenshots/01-link-hubs-directory.png)
 
-### 2. Inside a Link Hub (Hub Detail & In-Hub Actions)
-*Dedicated workspace showing hub hero banner, member list, and in-hub **Bulk Import** & **Create Link** actions.*
-![Hub Detail View](./screenshots/02-hub-detail-actions.png)
+### 2. Inside a Link Hub — Admin Controls & In-Hub Actions
+*Dedicated hub view featuring the hero banner, in-hub **"Bulk Import"** & **"+ Create Link"** actions, and live performance metrics.*
+![Hub Admin View & Actions](./screenshots/02-hub-detail-admin-actions.png)
 
-### 3. Hub Analytics Dashboard (Admin Only)
-*Real-time click velocity charts, device distribution, geographic breakdown, and bot telemetry.*
-![Hub Analytics View](./screenshots/03-hub-analytics.png)
+### 3. Inside a Link Hub — Visitor View & Access Workflow
+*Clean preview of public links for visitors with built-in **"Get User Access"** collaboration request.*
+![Hub Visitor View](./screenshots/03-hub-visitor-view.png)
 
-### 4. In-Hub Bulk CSV Import
-*Streamed CSV parser verifying column syntax, custom aliases, and destination URLs before batch creation.*
-![Bulk CSV Import Modal](./screenshots/04-bulk-csv-modal.png)
+### 4. Hub Analytics & Real-Time Telemetry (Admin Only)
+*Interactive Recharts click velocity stream (human vs. total differentiation), live Geo-IP country rankings, and device breakdown donut.*
+![Hub Analytics Telemetry](./screenshots/04-hub-analytics-telemetry.png)
 
-### 5. Smart Link Creation Wizard
-*Create links with custom aliases, device-specific targeting (iOS/Android/Web), click caps, and password gates.*
-![Create Link Wizard](./screenshots/05-create-link-wizard.png)
-
-### 6. Interactive QR Code Studio
-*Custom branded QR code generation with custom accent colors and instant PNG download.*
-![QR Code Studio](./screenshots/06-qr-code-studio.png)
-
-### 7. User Profile & Audit Activity Feed
-*Audit feed tracking user actions, creation events, status toggles, and role badges.*
-![Profile & Activity Feed](./screenshots/07-user-profile-activity.png)
-
-### 8. Public Link-in-Bio Landing Page
-*Responsive mobile-first micro-page showcasing curated links for a creator or organization.*
-![Link-in-Bio Landing Page](./screenshots/08-bio-page.png)
+### 5. In-Hub Bulk CSV Import Engine
+*Streaming PapaParse client-side validator with row preview, status verification, and batch creation directly into the hub.*
+![Bulk CSV Import Modal](./screenshots/05-bulk-csv-import-modal.png)
 
 ---
 
