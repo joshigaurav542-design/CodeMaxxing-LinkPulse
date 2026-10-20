@@ -378,6 +378,8 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
     const hub4 = 'hub-educonnect-04';
     const hub5 = 'hub-smartlife-05';
     const hub6 = 'hub-fitsphere-06';
+    const hub7 = 'hub-wanderworld-07';
+    const hub8 = 'hub-devstack-08';
 
     const insertHubStmt = db.prepare(`
       INSERT INTO link_hubs (id, name, slug, description, color, category, admin_id, is_public, created_at, updated_at)
@@ -390,6 +392,8 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
     insertHubStmt.run(hub4, 'EduConnect', 'educonnect', 'Useful academic resources, online courses, tutorials, and student tools.', '#0284c7', 'Education & Learning', adminId, now, now);
     insertHubStmt.run(hub5, 'SmartLife', 'smartlife', 'Tools for budgeting, organizing tasks, managing time, and improving productivity.', '#10b981', 'Finance & Productivity', adminId, now, now);
     insertHubStmt.run(hub6, 'FitSphere', 'fitsphere', 'Fitness education, exercise demonstrations, nutrition information, and healthy-lifestyle resources.', '#f43f5e', 'Health & Fitness', adminId, now, now);
+    insertHubStmt.run(hub7, 'WanderWorld', 'wanderworld', 'Travel planning, destination discovery, accommodation searches, and local exploration.', '#f59e0b', 'Travel & Exploration', adminId, now, now);
+    insertHubStmt.run(hub8, 'DevStack', 'devstack', 'Developer resources, coding documentation, repositories, and technical tools.', '#6366f1', 'Technology & Development', adminId, now, now);
 
     const insertMemberStmt = db.prepare(`
       INSERT OR IGNORE INTO hub_members (id, hub_id, user_id, role, created_at)
@@ -406,6 +410,10 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
     insertMemberStmt.run('mem-8', hub5, userId, 'CONTRIBUTOR', now);
     insertMemberStmt.run('mem-9', hub6, adminId, 'ADMIN', now);
     insertMemberStmt.run('mem-10', hub6, userId, 'CONTRIBUTOR', now);
+    insertMemberStmt.run('mem-11', hub7, adminId, 'ADMIN', now);
+    insertMemberStmt.run('mem-12', hub7, userId, 'CONTRIBUTOR', now);
+    insertMemberStmt.run('mem-13', hub8, adminId, 'ADMIN', now);
+    insertMemberStmt.run('mem-14', hub8, userId, 'CONTRIBUTOR', now);
 
     try {
       db.prepare(`UPDATE links SET hub_id = ? WHERE id IN ('lnk-hack-01', 'lnk-conf-03', 'lnk-exp-05')`).run(hub1);
@@ -415,6 +423,9 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
       const eduTags = JSON.stringify(['education', 'courses', 'learning']);
       const prodTags = JSON.stringify(['finance', 'productivity', 'organization']);
       const fitTags = JSON.stringify(['fitness', 'exercise', 'nutrition']);
+      const travelTags = JSON.stringify(['travel', 'exploration', 'discovery', 'tourism']);
+      const devTags = JSON.stringify(['coding', 'development', 'technology']);
+
       const insertLinkStmt = db.prepare(`
         INSERT OR REPLACE INTO links (
           id, short_code, custom_alias, destination_url, title,
@@ -434,6 +445,16 @@ function seedLinkHubsIfEmpty(db: DatabaseSync) {
       insertLinkStmt.run('lnk-fit-01', 'fit-nhs', 'fit-nhs', 'https://www.nhs.uk/live-well/exercise/', 'NHS Fitness', 64, fitTags, 'ws-codemaxxing-001', hub6, adminId, now, now);
       insertLinkStmt.run('lnk-fit-02', 'fit-musclewiki', 'fit-musclewiki', 'https://musclewiki.com/', 'MuscleWiki', 88, fitTags, 'ws-codemaxxing-001', hub6, adminId, now, now);
       insertLinkStmt.run('lnk-fit-03', 'fit-harvard', 'fit-harvard', 'https://nutritionsource.hsph.harvard.edu/', 'Harvard Nutrition Source', 52, fitTags, 'ws-codemaxxing-001', hub6, adminId, now, now);
+
+      insertLinkStmt.run('lnk-trv-01', 'wander-gmaps', 'wander-gmaps', 'https://maps.google.com/', 'Google Maps', 125, travelTags, 'ws-codemaxxing-001', hub7, adminId, now, now);
+      insertLinkStmt.run('lnk-trv-02', 'wander-tripadvisor', 'wander-tripadvisor', 'https://www.tripadvisor.com/', 'TripAdvisor', 73, travelTags, 'ws-codemaxxing-001', hub7, adminId, now, now);
+      insertLinkStmt.run('lnk-trv-03', 'wander-booking', 'wander-booking', 'https://www.booking.com/', 'Booking.com', 89, travelTags, 'ws-codemaxxing-001', hub7, adminId, now, now);
+      insertLinkStmt.run('lnk-trv-04', 'wander-india', 'wander-india', 'https://www.incredibleindia.gov.in/', 'Incredible India', 64, travelTags, 'ws-codemaxxing-001', hub7, adminId, now, now);
+
+      insertLinkStmt.run('lnk-dev-01', 'dev-github', 'dev-github', 'https://github.com/', 'GitHub', 156, devTags, 'ws-codemaxxing-001', hub8, adminId, now, now);
+      insertLinkStmt.run('lnk-dev-02', 'dev-mdn', 'dev-mdn', 'https://developer.mozilla.org/', 'MDN Web Docs', 98, devTags, 'ws-codemaxxing-001', hub8, adminId, now, now);
+      insertLinkStmt.run('lnk-dev-03', 'dev-stackoverflow', 'dev-stackoverflow', 'https://stackoverflow.com/', 'Stack Overflow', 142, devTags, 'ws-codemaxxing-001', hub8, adminId, now, now);
+      insertLinkStmt.run('lnk-dev-04', 'dev-vercel', 'dev-vercel', 'https://vercel.com/', 'Vercel', 84, devTags, 'ws-codemaxxing-001', hub8, adminId, now, now);
     } catch {}
 
     const actStmt = db.prepare(`
