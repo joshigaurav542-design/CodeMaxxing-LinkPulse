@@ -5,11 +5,12 @@ import {
   Layers, ArrowLeft, Plus, Eye, ShieldCheck, UserCheck,
   Globe, ExternalLink, Copy, Check, Trash2, QrCode,
   Users, BarChart2, Sparkles, AlertCircle, Loader2, Lock,
-  Clock, Share2
+  Clock, Share2, UploadCloud
 } from 'lucide-react';
 import { LinkHub, Link, HubMember, HubRole } from '@/lib/types';
 import ShareHubModal from './ShareHubModal';
 import AnalyticsView from './AnalyticsView';
+import CsvBulkUploadModal from './CsvBulkUploadModal';
 
 interface HubDetailViewProps {
   hub: LinkHub;
@@ -41,6 +42,7 @@ export default function HubDetailView({
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [isDeletingHub, setIsDeletingHub] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
 
   // Fetch hub links & members
   const fetchHubData = async () => {
@@ -380,14 +382,25 @@ export default function HubDetailView({
             )}
 
             {hasUserAccess && (
-              <button
-                onClick={() => onOpenCreateLinkModal(hub.id)}
-                className="px-4 py-2 rounded-xl text-white font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-                style={{ backgroundColor: hub.color || '#6366f1' }}
-              >
-                <Plus className="w-4 h-4" />
-                Add Link to Hub
-              </button>
+              <>
+                <button
+                  onClick={() => setIsCsvModalOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                  title="Bulk Import Links via CSV into this Hub"
+                >
+                  <UploadCloud className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Bulk Import</span>
+                </button>
+
+                <button
+                  onClick={() => onOpenCreateLinkModal(hub.id)}
+                  className="px-4 py-2 rounded-xl text-white font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  style={{ backgroundColor: hub.color || '#6366f1' }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Link
+                </button>
+              </>
             )}
 
             {isHubAdmin && (
@@ -609,12 +622,22 @@ export default function HubDetailView({
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => onOpenCreateLinkModal(hub.id)}
-                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer shrink-0"
-              >
-                + Add Link to Hub
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setIsCsvModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-500/40 bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 font-semibold text-xs shadow-2xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  Bulk Import
+                </button>
+                <button
+                  onClick={() => onOpenCreateLinkModal(hub.id)}
+                  className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Create Link
+                </button>
+              </div>
             </div>
           ) : hasUserAccess ? (
             <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-500/10 border border-emerald-200/80 dark:border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -625,16 +648,26 @@ export default function HubDetailView({
                     Contributor Access Enabled
                   </p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    You have User Access to this hub. You can add new links and collaborate with the hub admin.
+                    You have User Access to this hub. You can add new links, bulk import links, and collaborate with the hub admin.
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => onOpenCreateLinkModal(hub.id)}
-                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer shrink-0"
-              >
-                + Add Link to Hub
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setIsCsvModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-500/40 bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-semibold text-xs shadow-2xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  Bulk Import
+                </button>
+                <button
+                  onClick={() => onOpenCreateLinkModal(hub.id)}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Create Link
+                </button>
+              </div>
             </div>
           ) : (
             <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -645,7 +678,7 @@ export default function HubDetailView({
                     Visitor Access Only
                   </p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    To add links to this hub, request User Access below. Once granted, you can create and manage links on this hub.
+                    To create links or bulk import into this hub, request User Access below. Once granted, you can create and manage links on this hub.
                   </p>
                 </div>
               </div>
@@ -684,13 +717,23 @@ export default function HubDetailView({
                   className="px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
                 {hasUserAccess && (
-                  <button
-                    onClick={() => onOpenCreateLinkModal(hub.id)}
-                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1 transition cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add Link
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setIsCsvModalOpen(true)}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1 transition cursor-pointer"
+                      title="Bulk Import Links from CSV"
+                    >
+                      <UploadCloud className="w-3.5 h-3.5 text-indigo-500" />
+                      <span className="hidden sm:inline">Bulk Import</span>
+                    </button>
+                    <button
+                      onClick={() => onOpenCreateLinkModal(hub.id)}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Create Link</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -704,12 +747,22 @@ export default function HubDetailView({
                   No links in this hub yet.
                 </p>
                 {hasUserAccess ? (
-                  <button
-                    onClick={() => onOpenCreateLinkModal(hub.id)}
-                    className="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold transition cursor-pointer"
-                  >
-                    Create the First Link
-                  </button>
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => onOpenCreateLinkModal(hub.id)}
+                      className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Create Link
+                    </button>
+                    <button
+                      onClick={() => setIsCsvModalOpen(true)}
+                      className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <UploadCloud className="w-3.5 h-3.5 text-indigo-500" />
+                      Bulk Import CSV
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={handleGetUserAccess}
@@ -892,6 +945,20 @@ export default function HubDetailView({
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
           hub={hub}
+        />
+      )}
+
+      {/* CSV Bulk Upload Modal */}
+      {isCsvModalOpen && (
+        <CsvBulkUploadModal
+          isOpen={isCsvModalOpen}
+          onClose={() => setIsCsvModalOpen(false)}
+          onLinksImported={() => {
+            fetchHubData();
+            onHubUpdated();
+          }}
+          hubId={hub.id}
+          userId={currentUser?.id}
         />
       )}
     </div>

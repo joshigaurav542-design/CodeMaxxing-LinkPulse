@@ -8,6 +8,8 @@ interface CsvBulkUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLinksImported: () => void;
+  hubId?: string;
+  userId?: string;
 }
 
 interface ParsedRow {
@@ -18,7 +20,13 @@ interface ParsedRow {
   reason?: string;
 }
 
-export default function CsvBulkUploadModal({ isOpen, onClose, onLinksImported }: CsvBulkUploadModalProps) {
+export default function CsvBulkUploadModal({
+  isOpen,
+  onClose,
+  onLinksImported,
+  hubId,
+  userId
+}: CsvBulkUploadModalProps) {
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -100,7 +108,9 @@ export default function CsvBulkUploadModal({ isOpen, onClose, onLinksImported }:
           body: JSON.stringify({
             destinationUrl: row.destinationUrl,
             customAlias: row.customAlias,
-            title: row.title
+            title: row.title,
+            hubId: hubId || undefined,
+            createdById: userId || undefined
           })
         });
         if (res.ok) successCount++;
@@ -126,8 +136,12 @@ export default function CsvBulkUploadModal({ isOpen, onClose, onLinksImported }:
               <UploadCloud className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-semibold text-sm text-slate-900 dark:text-white">Bulk CSV Import</h2>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Upload multiple links simultaneously</p>
+              <h2 className="font-semibold text-sm text-slate-900 dark:text-white">
+                {hubId ? 'Bulk CSV Import to Hub' : 'Bulk CSV Import'}
+              </h2>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {hubId ? 'Import multiple links directly into this link hub' : 'Upload multiple links simultaneously'}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">

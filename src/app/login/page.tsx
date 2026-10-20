@@ -18,7 +18,8 @@ import {
   LogOut,
   Database,
   KeyRound,
-  AlertCircle
+  AlertCircle,
+  Globe
 } from 'lucide-react';
 import { logSupabaseActivity, supabase } from '@/lib/supabaseClient';
 
@@ -170,6 +171,7 @@ export default function LoginPage() {
     try {
       localStorage.removeItem('linkpulse_user');
       localStorage.removeItem('linkpulse_supabase_user');
+      localStorage.removeItem('linkpulse_visitor');
     } catch {}
 
     setCurrentUser(null);
@@ -180,12 +182,13 @@ export default function LoginPage() {
     setErrorMsg(null);
   };
 
-  const fillDemoAccount = (demoEmail: string, demoPw: string) => {
-    setMode('login');
-    setEmail(demoEmail);
-    setPassword(demoPw);
-    setErrorMsg(null);
-    setSuccessMsg(null);
+  const handleContinueAsVisitor = () => {
+    try {
+      localStorage.setItem('linkpulse_visitor', 'true');
+      localStorage.removeItem('linkpulse_user');
+      localStorage.removeItem('linkpulse_supabase_user');
+    } catch {}
+    router.push('/');
   };
 
   return (
@@ -468,48 +471,30 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Quick Demo Credentials in Database */}
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
-                  Quick Demo Accounts in Database:
-                </span>
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={() => fillDemoAccount('gaurav.joshi@gehu.ac.in', 'linkpulse2026')}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-left flex items-center justify-between cursor-pointer"
-                  >
-                    <div>
-                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        Gaurav Joshi (Admin)
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-mono">
-                        gaurav.joshi@gehu.ac.in • pw: linkpulse2026
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300">
-                      ADMIN
+              {/* Continue without an Account (Visitor Only) */}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-white dark:bg-slate-900 px-2.5 text-slate-400 font-medium">
+                      or explore first
                     </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => fillDemoAccount('team.lead@codemaxxing.dev', 'linkpulse2026')}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-left flex items-center justify-between cursor-pointer"
-                  >
-                    <div>
-                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        CodeMaxxing Lead (User)
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-mono">
-                        team.lead@codemaxxing.dev • pw: linkpulse2026
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                      USER
-                    </span>
-                  </button>
+                  </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={handleContinueAsVisitor}
+                  className="w-full py-2.5 px-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 bg-slate-50/80 hover:bg-indigo-50/30 dark:bg-slate-950/60 dark:hover:bg-indigo-500/10 text-slate-700 dark:text-slate-200 font-semibold text-xs transition cursor-pointer flex items-center justify-center gap-2 group shadow-2xs"
+                >
+                  <Globe className="w-4 h-4 text-sky-500 group-hover:scale-110 transition-transform" />
+                  <span>Continue without an account (Visitor Only)</span>
+                </button>
+                <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 leading-relaxed">
+                  Visitor access allows viewing public link hubs in read-only mode without saving an account.
+                </p>
               </div>
             </>
           )}

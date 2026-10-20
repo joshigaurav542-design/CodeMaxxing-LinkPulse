@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Link2, Plus, UploadCloud, BarChart3, ShieldCheck,
   Layers, Zap, Activity, Clock, LogIn, LogOut,
   Globe, ShieldAlert, AlertCircle, Info, Lock,
-  Sparkles, ArrowRight, ArrowLeft
+  Sparkles, ArrowRight, ArrowLeft, Loader2
 } from 'lucide-react';
 import CreateLinkModal from '@/components/CreateLinkModal';
 import CsvBulkUploadModal from '@/components/CsvBulkUploadModal';
@@ -19,11 +20,13 @@ import { Link, Campaign, Role, LinkHub } from '@/lib/types';
 import { logSupabaseActivity } from '@/lib/supabaseClient';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [currentView, setCurrentView] = useState<'hubs' | 'profile' | 'governance'>('hubs');
   const [links, setLinks] = useState<Link[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [hubs, setHubs] = useState<LinkHub[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   // User & RBAC state (default to VISITOR on initial mount so session & role are always consistent)
   const [user, setUser] = useState<{ id?: string; email: string; name: string; role?: Role } | null>(null);
@@ -42,6 +45,7 @@ export default function DashboardPage() {
     try {
       const supabaseRaw = localStorage.getItem('linkpulse_supabase_user');
       const raw = localStorage.getItem('linkpulse_user');
+      const isVisitor = localStorage.getItem('linkpulse_visitor');
 
       if (supabaseRaw) {
         const su = JSON.parse(supabaseRaw);
@@ -53,6 +57,7 @@ export default function DashboardPage() {
         });
         setActiveRole('USER');
         logSupabaseActivity(su.id, 'PAGE_VIEW', { path: '/', source: 'supabase_session' });
+        setIsCheckingSession(false);
       } else if (raw) {
         const u = JSON.parse(raw);
         setUser(u);
@@ -60,13 +65,20 @@ export default function DashboardPage() {
         if (u.id) {
           logSupabaseActivity(u.id, 'PAGE_VIEW', { path: '/', source: 'local_session' });
         }
-      } else {
+        setIsCheckingSession(false);
+      } else if (isVisitor) {
+        // Visitor access acknowledged
         setUser(null);
         setActiveRole('VISITOR');
+        setIsCheckingSession(false);
+      } else {
+        // First time visiting website without session -> redirect to login/register page
+        router.replace('/login');
+        return;
       }
     } catch {
-      setUser(null);
-      setActiveRole('VISITOR');
+      router.replace('/login');
+      return;
     }
   }, []);
 
@@ -76,19 +88,12 @@ export default function DashboardPage() {
     }
     localStorage.removeItem('linkpulse_supabase_user');
     localStorage.removeItem('linkpulse_user');
+    localStorage.removeItem('linkpulse_visitor');
     setUser(null);
     setActiveRole('VISITOR');
     setCurrentView('hubs');
     setLinks([]);
-  };
-
-  const handleQuickSignIn = (selectedUser: { id: string; email: string; name: string; role: Role }) => {
-    setUser(selectedUser);
-    setActiveRole(selectedUser.role);
-    try {
-      localStorage.setItem('linkpulse_user', JSON.stringify(selectedUser));
-    } catch {}
-    setCurrentView('hubs');
+    router.push('/login');
   };
 
   const handleRoleChange = (newRole: Role) => {
@@ -247,6 +252,17 @@ export default function DashboardPage() {
     setIsCsvOpen(true);
   };
 
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+        <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg animate-pulse mb-3">
+          <Zap className="w-5 h-5 fill-white" />
+        </div>
+        <p className="text-xs text-slate-400 font-medium">Loading LinkPulse...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col font-sans">
       {/* Navigation Header */}
@@ -274,22 +290,6 @@ export default function DashboardPage() {
           {/* Action Buttons, RBAC Badge & Theme Switcher */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
-
-            <button
-              onClick={handleOpenCsvModal}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition cursor-pointer shadow-2xs"
-            >
-              <UploadCloud className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-              Bulk Import
-            </button>
-
-            <button
-              onClick={() => handleOpenCreateModal()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white text-xs font-medium shadow-xs transition-all active:scale-95 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              Create Link
-            </button>
 
             {/* Top Right "Your Profile" Tab Button */}
             <button
@@ -349,126 +349,21 @@ export default function DashboardPage() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-5">
-        {/* Sign In Prompt Gate if user is not signed in */}
-        {!user && (
-          <div className="p-7 sm:p-9 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800 shadow-xl text-center max-w-2xl mx-auto space-y-5 animate-in fade-in">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center mx-auto shadow-md">
-              <Zap className="w-6 h-6 fill-white" />
-            </div>
-            <div className="space-y-1.5">
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Sign in to LinkPulse
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                Sign in to view link hubs, create link hubs, request user access to hubs, and track your activity.
-              </p>
-            </div>
-
-            {/* Quick 1-Click Sign-in Selection */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-              <button
-                type="button"
-                onClick={() =>
-                  handleQuickSignIn({
-                    id: 'usr-admin-001',
-                    name: 'Gaurav Joshi (Admin)',
-                    email: 'gaurav.joshi@gehu.ac.in',
-                    role: 'ADMIN'
-                  })
-                }
-                className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 hover:bg-indigo-50/40 dark:hover:bg-indigo-500/10 transition-all flex items-center gap-3 cursor-pointer group shadow-2xs"
-              >
-                <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center shrink-0 text-xs">
-                  GJ
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-xs text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
-                      Gaurav Joshi
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300">
-                      ADMIN
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 truncate">gaurav.joshi@gehu.ac.in</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  handleQuickSignIn({
-                    id: 'usr-marketer-002',
-                    name: 'CodeMaxxing Lead',
-                    email: 'team.lead@codemaxxing.dev',
-                    role: 'USER'
-                  })
-                }
-                className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 hover:bg-emerald-50/40 dark:hover:bg-emerald-500/10 transition-all flex items-center gap-3 cursor-pointer group shadow-2xs"
-              >
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center shrink-0 text-xs">
-                  CL
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-xs text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
-                      CodeMaxxing Lead
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
-                      USER
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 truncate">team.lead@codemaxxing.dev</p>
-                </div>
-              </button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-1">
-              <a
-                href="/login"
-                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-900 hover:bg-black dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-semibold text-xs shadow-xs transition-all text-center"
-              >
-                Sign In with Email / Register
-              </a>
-              <button
-                type="button"
-                onClick={() => {
-                  handleQuickSignIn({
-                    id: 'usr-visitor-guest',
-                    name: 'Guest Visitor',
-                    email: 'visitor@linkpulse.io',
-                    role: 'VISITOR'
-                  });
-                }}
-                className="w-full sm:w-auto px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all cursor-pointer"
-              >
-                Browse Hubs as Visitor
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Visitor Role Warning / Guidance Banner */}
-        {activeRole === 'VISITOR' && user && (
+        {/* Visitor Role Guidance Banner */}
+        {activeRole === 'VISITOR' && (
           <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-500/10 border border-sky-200/80 dark:border-sky-500/20 text-sky-900 dark:text-sky-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-center gap-2.5">
               <Globe className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
               <span>
-                <strong>Visitor Mode:</strong> You can view link hubs as a visitor. To add links to a hub, click <strong>"Get User Access"</strong> on that hub.
+                <strong>Visitor Mode:</strong> You are browsing as a guest with visitor-level access (view-only). To create or manage link hubs, please sign in.
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsRoleModalOpen(true)}
-                className="text-xs text-sky-700 dark:text-sky-300 underline font-medium hover:text-sky-900 cursor-pointer"
-              >
-                Switch Role
-              </button>
+            <div className="flex items-center gap-2 shrink-0">
               <a
                 href="/login"
-                className="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold text-xs transition cursor-pointer"
+                className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-semibold text-xs transition cursor-pointer shadow-2xs"
               >
-                Sign In
+                Sign In / Register
               </a>
             </div>
           </div>
