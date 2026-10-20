@@ -1,4 +1,4 @@
-export type Role = 'USER' | 'ADMIN';
+export type Role = 'VISITOR' | 'USER' | 'ADMIN';
 
 export interface User {
   id: string;
@@ -52,6 +52,7 @@ export interface Link {
   createdAt: string;
   updatedAt: string;
   campaign?: Campaign;
+  tags?: string[];
 }
 
 export interface ClickEvent {

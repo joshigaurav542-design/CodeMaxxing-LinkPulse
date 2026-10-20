@@ -23,15 +23,17 @@ interface CreateLinkModalProps {
   onClose: () => void;
   campaigns: Campaign[];
   onLinkCreated: (link: Link) => void;
+  userId?: string;
 }
 
-export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCreated }: CreateLinkModalProps) {
+export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCreated, userId }: CreateLinkModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
 
   // Step 1 State
   const [destinationUrl, setDestinationUrl] = useState('');
   const [customAlias, setCustomAlias] = useState('');
   const [title, setTitle] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
 
   // Alias Validation State
   const [aliasChecking, setAliasChecking] = useState(false);
@@ -145,7 +147,9 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
         ios: iosUrl.trim() || undefined,
         android: androidUrl.trim() || undefined,
         desktop: desktopUrl.trim() || undefined
-      } : undefined
+      } : undefined,
+      tags: tagsInput.trim() ? tagsInput.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
+      createdById: userId || undefined
     };
 
     try {
@@ -244,6 +248,20 @@ export default function CreateLinkModal({ isOpen, onClose, campaigns, onLinkCrea
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Summer Campaign Landing"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+                />
+              </div>
+
+              {/* Tags Input */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  Tags & Labels (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  placeholder="e.g. marketing, social, product (comma separated)"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
                 />
               </div>

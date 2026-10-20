@@ -7,9 +7,8 @@ import {
 } from 'recharts';
 import {
   TrendingUp, Users, Shield, Bot, Globe, Smartphone,
-  RefreshCw, MousePointerClick, ArrowUpRight, Radio, MapPin
+  RefreshCw, MousePointerClick, ArrowUpRight
 } from 'lucide-react';
-import { getCountryFlag } from '@/lib/geoip';
 
 interface AnalyticsData {
   totalClicks: number;
@@ -18,17 +17,6 @@ interface AnalyticsData {
   uniqueVisitors: number;
   timeSeries: Array<{ date: string; clicks: number; humanClicks: number }>;
   countries: Array<{ country: string; count: number }>;
-  cities?: Array<{ city: string; country: string; count: number }>;
-  recentLocations?: Array<{
-    id: string;
-    country: string;
-    city: string;
-    timestamp: string;
-    deviceType: string;
-    os: string;
-    browser: string;
-    referrer: string;
-  }>;
   devices: Array<{ device: string; count: number }>;
   os: Array<{ os: string; count: number }>;
   referrers: Array<{ referrer: string; count: number }>;
@@ -36,27 +24,19 @@ interface AnalyticsData {
 
 const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
 
-function formatTimeAgo(dateString: string): string {
-  try {
-    const diff = (Date.now() - new Date(dateString).getTime()) / 1000;
-    if (diff < 60) return `${Math.max(1, Math.floor(diff))}s ago`;
-    const mins = Math.floor(diff / 60);
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
-  } catch {
-    return 'recently';
-  }
-}
-
-export default function AnalyticsView({ linkId }: { linkId?: string }) {
+export default function AnalyticsView({
+  linkId,
+  userId,
+  userRole = 'ADMIN'
+}: {
+  linkId?: string;
+  userId?: string;
+  userRole?: 'VISITOR' | 'USER' | 'ADMIN';
+}) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDark, setIsDark] = useState(false);
-  const [locationView, setLocationView] = useState<'countries' | 'cities' | 'live'>('countries');
 
   useEffect(() => {
     const checkDark = () => {
@@ -70,8 +50,14 @@ export default function AnalyticsView({ linkId }: { linkId?: string }) {
   const fetchAnalytics = async () => {
     setIsRefreshing(true);
     try {
-      const url = linkId ? `/api/analytics?linkId=${linkId}` : '/api/analytics';
-      const res = await fetch(url);
+      const params = new URLSearchParams();
+      if (linkId) params.set('linkId', linkId);
+      if (userRole === 'USER' && userId) {
+        params.set('userId', userId);
+        params.set('role', 'USER');
+      }
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetch(`/api/analytics${qs}`);
       const json = await res.json();
       if (json.success) {
         setData(json.analytics);
@@ -86,7 +72,7 @@ export default function AnalyticsView({ linkId }: { linkId?: string }) {
 
   useEffect(() => {
     fetchAnalytics();
-  }, [linkId]);
+  }, [linkId, userId, userRole]);
 
   if (loading || !data) {
     return (
@@ -102,6 +88,23 @@ export default function AnalyticsView({ linkId }: { linkId?: string }) {
 
   return (
     <div className="space-y-5">
+      {/* Role Analytics Scope Indicator */}
+      <div className="flex items-center justify-between p-3 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-xs">
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] ${userRole === 'ADMIN'
+              ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300'
+              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+            }`}>
+            {userRole === 'ADMIN' ? 'Admin Scope' : 'User Scope'}
+          </span>
+          <span className="text-slate-600 dark:text-slate-300">
+            {userRole === 'ADMIN'
+              ? 'Platform-Wide Telemetry: Aggregating all redirects across all workspace users.'
+              : 'Personal Telemetry: Displaying click analytics for your own links only.'}
+          </span>
+        </div>
+      </div>
+
       {/* Metric Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Card 1: Total Clicks */}
@@ -227,158 +230,33 @@ export default function AnalyticsView({ linkId }: { linkId?: string }) {
 
       {/* Grid: Geographic Distribution & Device Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Geographic Breakdown & Real-Time Location Tracking */}
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-5 shadow-2xs flex flex-col">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <Globe className="w-4 h-4 text-sky-500" />
-                  Real-Time Location Tracking
-                </h3>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live GeoIP
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Accurate country & city telemetry resolved via IP</p>
-            </div>
-
-            {/* View Switcher: Countries | Cities | Live Feed */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[11px] font-medium text-slate-600 dark:text-slate-300">
-              <button
-                onClick={() => setLocationView('countries')}
-                className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
-                  locationView === 'countries'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-xs'
-                    : 'hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Countries ({data.countries.length})
-              </button>
-              <button
-                onClick={() => setLocationView('cities')}
-                className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
-                  locationView === 'cities'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-xs'
-                    : 'hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Cities ({(data.cities || []).length})
-              </button>
-              <button
-                onClick={() => setLocationView('live')}
-                className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1 ${
-                  locationView === 'live'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-xs'
-                    : 'hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Radio className="w-3 h-3 text-emerald-500 animate-pulse" />
-                Live Feed
-              </button>
-            </div>
-          </div>
-
-          {/* Location Content */}
-          <div className="flex-1 min-h-[180px]">
-            {locationView === 'countries' && (
-              <div className="space-y-2.5">
-                {data.countries.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-8">No country telemetry recorded yet.</p>
-                ) : (
-                  data.countries.slice(0, 6).map((c, idx) => {
-                    const max = data.countries[0]?.count || 1;
-                    const pct = ((c.count / max) * 100).toFixed(0);
-                    const flag = getCountryFlag(c.country);
-                    return (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                            <span className="text-base leading-none">{flag}</span>
-                            <span>{c.country}</span>
-                          </span>
-                          <span className="font-mono text-slate-500 dark:text-slate-400">{c.count.toLocaleString()} visits</span>
-                        </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-indigo-500 dark:bg-indigo-400 rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-
-            {locationView === 'cities' && (
-              <div className="space-y-2.5">
-                {(!data.cities || data.cities.length === 0) ? (
-                  <p className="text-xs text-slate-400 text-center py-8">No city telemetry recorded yet.</p>
-                ) : (
-                  data.cities.slice(0, 6).map((c, idx) => {
-                    const max = data.cities![0]?.count || 1;
-                    const pct = ((c.count / max) * 100).toFixed(0);
-                    const flag = getCountryFlag(c.country);
-                    return (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 truncate max-w-[200px]">
-                            <span className="text-base leading-none">{flag}</span>
-                            <span className="truncate">{c.city}, {c.country}</span>
-                          </span>
-                          <span className="font-mono text-slate-500 dark:text-slate-400 shrink-0">{c.count.toLocaleString()} visits</span>
-                        </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-sky-500 dark:bg-sky-400 rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-
-            {locationView === 'live' && (
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {(!data.recentLocations || data.recentLocations.length === 0) ? (
-                  <p className="text-xs text-slate-400 text-center py-8">Waiting for live visitor traffic...</p>
-                ) : (
-                  data.recentLocations.map((loc, idx) => {
-                    const flag = getCountryFlag(loc.country);
-                    return (
-                      <div
-                        key={loc.id || idx}
-                        className="p-2 rounded-lg bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between text-xs"
-                      >
-                        <div className="flex items-center gap-2 truncate max-w-[210px]">
-                          <span className="text-base shrink-0">{flag}</span>
-                          <div className="truncate">
-                            <span className="font-medium text-slate-800 dark:text-slate-200 truncate block">
-                              {loc.city && loc.city !== 'Unknown' ? `${loc.city}, ` : ''}{loc.country}
-                            </span>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500 capitalize">
-                              {loc.browser} • {loc.deviceType}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 shrink-0">
-                          {formatTimeAgo(loc.timestamp)}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
+        {/* Geographic Breakdown */}
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-5 shadow-2xs">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2 mb-3.5">
+            <Globe className="w-4 h-4 text-sky-500" />
+            Geographic Distribution
+          </h3>
+          <div className="space-y-2.5">
+            {data.countries.slice(0, 6).map((c, idx) => {
+              const max = data.countries[0]?.count || 1;
+              const pct = ((c.count / max) * 100).toFixed(0);
+              return (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{c.country}</span>
+                    <span className="font-mono text-slate-500 dark:text-slate-400">{c.count.toLocaleString()} visits</span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-500 dark:bg-indigo-400 rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-
 
         {/* Device & Client Breakdown */}
         <div className="bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-5 shadow-2xs">
@@ -444,5 +322,133 @@ export default function AnalyticsView({ linkId }: { linkId?: string }) {
         </div>
       </div>
     </div>
+  );
+}
+const pct = ((c.count / max) * 100).toFixed(0);
+const flag = getCountryFlag(c.country);
+return (
+  <div key={idx} className="space-y-1">
+    <div className="flex items-center justify-between text-xs">
+      <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 truncate max-w-[200px]">
+        <span className="text-base leading-none">{flag}</span>
+        <span className="truncate">{c.city}, {c.country}</span>
+      </span>
+      <span className="font-mono text-slate-500 dark:text-slate-400 shrink-0">{c.count.toLocaleString()} visits</span>
+    </div>
+    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-sky-500 dark:bg-sky-400 rounded-full transition-all duration-500"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  </div>
+);
+                  })
+                )}
+              </div >
+            )}
+
+{
+  locationView === 'live' && (
+    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+      {(!data.recentLocations || data.recentLocations.length === 0) ? (
+        <p className="text-xs text-slate-400 text-center py-8">Waiting for live visitor traffic...</p>
+      ) : (
+        data.recentLocations.map((loc, idx) => {
+          const flag = getCountryFlag(loc.country);
+          return (
+            <div
+              key={loc.id || idx}
+              className="p-2 rounded-lg bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between text-xs"
+            >
+              <div className="flex items-center gap-2 truncate max-w-[210px]">
+                <span className="text-base shrink-0">{flag}</span>
+                <div className="truncate">
+                  <span className="font-medium text-slate-800 dark:text-slate-200 truncate block">
+                    {loc.city && loc.city !== 'Unknown' ? `${loc.city}, ` : ''}{loc.country}
+                  </span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 capitalize">
+                    {loc.browser} • {loc.deviceType}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 shrink-0">
+                {formatTimeAgo(loc.timestamp)}
+              </span>
+            </div>
+          );
+        })
+      )}
+    </div>
+  )
+}
+          </div >
+        </div >
+
+
+  {/* Device & Client Breakdown */ }
+  < div className = "bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-5 shadow-2xs" >
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2 mb-3.5">
+            <Smartphone className="w-4 h-4 text-emerald-500" />
+            Device Breakdown
+          </h3>
+          <div className="h-40 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data.devices}
+                  dataKey="count"
+                  nameKey="device"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={70}
+                  paddingAngle={4}
+                >
+                  {data.devices.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                    borderColor: isDark ? '#334155' : '#e2e8f0',
+                    color: isDark ? '#f8fafc' : '#0f172a',
+                    borderRadius: '0.75rem',
+                    fontSize: '12px'
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs mt-1">
+            {data.devices.map((d, i) => (
+              <div key={d.device} className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                <span className="text-slate-600 dark:text-slate-300 capitalize text-[11px]">{d.device}: {d.count}</span>
+              </div>
+            ))}
+          </div>
+        </div >
+      </div >
+
+  {/* Referrer Attribution */ }
+  < div className = "bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-5 shadow-2xs" >
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2 mb-3">
+          <ArrowUpRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          Top Acquisition Sources
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {data.referrers.map((r, i) => (
+            <div key={i} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-xs font-mono text-slate-700 dark:text-indigo-300 truncate max-w-[180px]">{r.referrer}</span>
+              <span className="text-xs font-semibold text-slate-700 dark:text-white bg-slate-200/70 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                {r.count}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div >
+    </div >
   );
 }

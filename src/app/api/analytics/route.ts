@@ -6,8 +6,12 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const linkId = searchParams.get('linkId') || undefined;
+    const userId = searchParams.get('userId') || undefined;
+    const role = searchParams.get('role');
 
-    const data = getAnalyticsOverview(linkId);
+    // Role-based visibility: 'USER' views analytics for own links only; 'ADMIN' views platform-wide
+    const scopeUserId = role === 'USER' && userId ? userId : undefined;
+    const data = getAnalyticsOverview(linkId, scopeUserId);
     const cacheStats = getCache().getStats();
 
     return NextResponse.json({

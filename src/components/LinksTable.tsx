@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import {
   Copy, Check, ExternalLink, QrCode, Lock, Clock,
-  Smartphone, Gauge, Search, Filter, BarChart3, Globe
+  Smartphone, Gauge, Search, Filter, BarChart3, Globe,
+  Trash2, Tag
 } from 'lucide-react';
-import { Link, Campaign } from '@/lib/types';
+import { Link, Campaign, Role } from '@/lib/types';
 
 interface LinksTableProps {
   links: Link[];
@@ -13,6 +14,8 @@ interface LinksTableProps {
   onOpenQr: (link: Link) => void;
   onSelectLinkAnalytics: (linkId: string) => void;
   onToggleActive: (link: Link) => void;
+  onDeleteLink?: (link: Link) => void;
+  userRole?: Role;
 }
 
 export default function LinksTable({
@@ -20,41 +23,47 @@ export default function LinksTable({
   campaigns,
   onOpenQr,
   onSelectLinkAnalytics,
-  onToggleActive
+  onToggleActive,
+  onDeleteLink,
+  userRole = 'USER'
 }: LinksTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
+  const [selectedTag, setSelectedTag] = useState<string>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  
-const handleCopy = async (link: Link) => {
-  const origin = window.location.origin;
-  const code = link.customAlias || link.shortCode;
-  const url = `${origin}/${code}`;
+  const handleCopy = async (link: Link) => {
+    const origin = window.location.origin;
+    const code = link.customAlias || link.shortCode;
+    const url = `${origin}/${code}`;
 
-  try {
-    await navigator.clipboard.writeText(url);
-    setCopiedId(link.id);
-    setTimeout(() => setCopiedId(null), 2000);
-  } catch (error) {
-    console.error('Failed to copy short URL:', error);
-    alert('Could not copy the link. Please try again.');
-  }
-};
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(link.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy short URL:', error);
+      alert('Could not copy the link. Please try again.');
+    }
+  };
 
+  const allTags = Array.from(new Set(links.flatMap((l) => l.tags || [])));
 
   const filteredLinks = links.filter((link) => {
     const search = searchTerm.toLowerCase();
 
-const matchesSearch =
-  (link.shortCode ?? '').toLowerCase().includes(search) ||
-  (link.customAlias ?? '').toLowerCase().includes(search) ||
-  (link.destinationUrl ?? '').toLowerCase().includes(search) ||
-  (link.title ?? '').toLowerCase().includes(search);
+    const matchesSearch =
+      (link.shortCode ?? '').toLowerCase().includes(search) ||
+      (link.customAlias ?? '').toLowerCase().includes(search) ||
+      (link.destinationUrl ?? '').toLowerCase().includes(search) ||
+      (link.title ?? '').toLowerCase().includes(search) ||
+      (link.tags ?? []).some((t) => t.toLowerCase().includes(search));
 
     const matchesCampaign = selectedCampaign === 'all' || link.campaignId === selectedCampaign;
+    const matchesTag = selectedTag === 'all' || (link.tags ?? []).includes(selectedTag);
 
-    return matchesSearch && matchesCampaign;
+    return matchesSearch && matchesCampaign && matchesTag;
   });
 
   return (
@@ -67,25 +76,45 @@ const matchesSearch =
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by alias, code, title or destination..."
+            placeholder="Search by alias, code, tag, title or destination..."
             className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-2xs"
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <select
-            value={selectedCampaign}
-            onChange={(e) => setSelectedCampaign(e.target.value)}
-            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer shadow-2xs"
-          >
-            <option value="all">All Campaigns ({links.length})</option>
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-wrap items-center gap-2">
+          {allTags.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <select
+                value={selectedTag}
+                onChange={(e) => setSelectedTag(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer shadow-2xs"
+              >
+                <option value="all">All Tags ({allTags.length})</option>
+                {allTags.map((t) => (
+                  <option key={t} value={t}>
+                    #{t}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <select
+              value={selectedCampaign}
+              onChange={(e) => setSelectedCampaign(e.target.value)}
+              className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer shadow-2xs"
+            >
+              <option value="all">All Campaigns ({links.length})</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -138,19 +167,41 @@ const matchesSearch =
                                 Capped
                               </span>
                             ) : !link.isActive ? (
-                              <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                              <button
+                                type="button"
+                                onClick={() => onToggleActive(link)}
+                                className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition cursor-pointer"
+                                title="Paused — click to make Live"
+                              >
                                 Paused
-                              </span>
+                              </button>
                             ) : (
-                              <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                              <button
+                                type="button"
+                                onClick={() => onToggleActive(link)}
+                                className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 transition cursor-pointer"
+                                title="Live — click to Pause"
+                              >
                                 Live
-                              </span>
+                              </button>
                             )}
                           </div>
                           {link.title && (
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[200px]">
                               {link.title}
                             </p>
+                          )}
+                          {link.tags && link.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {link.tags.map((t) => (
+                                <span
+                                  key={t}
+                                  className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60"
+                                >
+                                  #{t}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </td>
@@ -252,6 +303,37 @@ const matchesSearch =
                           >
                             <BarChart3 className="w-3.5 h-3.5" />
                           </button>
+
+                          {onDeleteLink && userRole !== 'VISITOR' && (
+                            confirmDeleteId === link.id ? (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => {
+                                    onDeleteLink(link);
+                                    setConfirmDeleteId(null);
+                                  }}
+                                  className="px-1.5 py-1 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-semibold transition cursor-pointer"
+                                  title="Confirm delete link"
+                                >
+                                  Yes
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="px-1.5 py-1 rounded-md bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] transition cursor-pointer"
+                                >
+                                  No
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmDeleteId(link.id)}
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition cursor-pointer"
+                                title="Delete Link"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )
+                          )}
                         </div>
                       </td>
                     </tr>

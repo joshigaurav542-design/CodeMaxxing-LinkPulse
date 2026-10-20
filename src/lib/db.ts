@@ -1,8 +1,9 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { User, Workspace, Campaign, Link, ClickEvent, DomainBlocklist, LinkInBio } from './types';
-import { hashPassword } from './security';
+import { hashPassword, verifyPassword } from './security';
 
 // Global singleton to prevent multiple database handles in Next.js development HMR
 declare global {
@@ -23,7 +24,7 @@ export function getDatabase(): DatabaseSync {
   }
 
   const db = new DatabaseSync(DB_PATH);
-  
+
   // Enable Write-Ahead Logging (WAL) for concurrency & performance
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec('PRAGMA foreign_keys = ON;');
@@ -77,6 +78,7 @@ function initSchema(db: DatabaseSync) {
       click_limit INTEGER,
       click_count INTEGER DEFAULT 0,
       device_rules TEXT,
+      tags TEXT,
       workspace_id TEXT NOT NULL,
       campaign_id TEXT,
       created_by_id TEXT NOT NULL,
@@ -86,6 +88,10 @@ function initSchema(db: DatabaseSync) {
       FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL,
       FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    try {
+      db.exec('ALTER TABLE links ADD COLUMN tags TEXT;');
+    } catch {}
 
     CREATE INDEX IF NOT EXISTS idx_links_short_code ON links(short_code);
     CREATE INDEX IF NOT EXISTS idx_links_custom_alias ON links(custom_alias);
@@ -310,15 +316,24 @@ function seedInitialData(db: DatabaseSync) {
 
 // ==================== Repository Helpers ====================
 
-export function getAllLinks(): Link[] {
+export function getAllLinks(userId?: string): Link[] {
   const db = getDatabase();
-  const rows = db.prepare(`
-    SELECT l.*, c.name as campaign_name, c.color as campaign_color
-    FROM links l
-    LEFT JOIN campaigns c ON l.campaign_id = c.id
-    ORDER BY l.created_at DESC
-  `).all() as any[];
+  const query = userId
+    ? `
+      SELECT l.*, c.name as campaign_name, c.color as campaign_color
+      FROM links l
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      WHERE l.created_by_id = ?
+      ORDER BY l.created_at DESC
+    `
+    : `
+      SELECT l.*, c.name as campaign_name, c.color as campaign_color
+      FROM links l
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      ORDER BY l.created_at DESC
+    `;
 
+  const rows = (userId ? db.prepare(query).all(userId) : db.prepare(query).all()) as any[];
   return rows.map(mapLinkRow);
 }
 
@@ -347,12 +362,14 @@ export function createLink(data: {
   campaignId?: string;
   workspaceId?: string;
   createdById?: string;
+  tags?: string[];
 }): Link {
   const db = getDatabase();
   const id = `lnk-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
   const now = new Date().toISOString();
   const pwHash = data.password ? hashPassword(data.password) : null;
   const devRulesJson = data.deviceRules ? JSON.stringify(data.deviceRules) : null;
+  const tagsJson = data.tags && data.tags.length > 0 ? JSON.stringify(data.tags) : null;
   const wsId = data.workspaceId || 'ws-codemaxxing-001';
   const userId = data.createdById || 'usr-admin-001';
 
@@ -360,8 +377,8 @@ export function createLink(data: {
     INSERT INTO links (
       id, short_code, custom_alias, destination_url, title,
       is_active, is_banned, password_hash, expires_at, click_limit, click_count,
-      device_rules, workspace_id, campaign_id, created_by_id, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)
+      device_rules, tags, workspace_id, campaign_id, created_by_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     data.shortCode,
@@ -372,6 +389,7 @@ export function createLink(data: {
     data.expiresAt || null,
     data.clickLimit || null,
     devRulesJson,
+    tagsJson,
     wsId,
     data.campaignId || null,
     userId,
@@ -526,11 +544,24 @@ export function getLinkInBio(slug: string): LinkInBio | null {
   };
 }
 
-export function getAnalyticsOverview(linkId?: string) {
+export function getAnalyticsOverview(linkId?: string, userId?: string) {
   const db = getDatabase();
 
-  const whereClause = linkId ? 'WHERE link_id = ?' : '';
-  const args = linkId ? [linkId] : [];
+  const whereClauses: string[] = [];
+  const args: any[] = [];
+
+  if (linkId) {
+    whereClauses.push('link_id = ?');
+    args.push(linkId);
+  }
+
+  if (userId) {
+    whereClauses.push('link_id IN (SELECT id FROM links WHERE created_by_id = ?)');
+    args.push(userId);
+  }
+
+  const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  const humanWhere = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')} AND is_bot = 0` : 'WHERE is_bot = 0';
 
   // Total and bot clicks
   const totals = db.prepare(`
@@ -558,8 +589,12 @@ export function getAnalyticsOverview(linkId?: string) {
   // Top Countries
   const countries = db.prepare(`
     SELECT country, COUNT(*) as count
+<<<<<<< HEAD
     FROM click_events
     ${baseWhere} AND country IS NOT NULL AND country != ''
+=======
+    FROM click_events ${humanWhere}
+>>>>>>> 40f1a20 (feat: implement RBAC user roles matrix, secure SQLite database auth, and link tag management)
     GROUP BY country
     ORDER BY count DESC
     LIMIT 10
@@ -587,8 +622,12 @@ export function getAnalyticsOverview(linkId?: string) {
   // Device Breakdown
   const devices = db.prepare(`
     SELECT device_type, COUNT(*) as count
+<<<<<<< HEAD
     FROM click_events
     ${baseWhere}
+=======
+    FROM click_events ${humanWhere}
+>>>>>>> 40f1a20 (feat: implement RBAC user roles matrix, secure SQLite database auth, and link tag management)
     GROUP BY device_type
     ORDER BY count DESC
   `).all(...args) as any[];
@@ -596,8 +635,12 @@ export function getAnalyticsOverview(linkId?: string) {
   // OS Breakdown
   const os = db.prepare(`
     SELECT os, COUNT(*) as count
+<<<<<<< HEAD
     FROM click_events
     ${baseWhere}
+=======
+    FROM click_events ${humanWhere}
+>>>>>>> 40f1a20 (feat: implement RBAC user roles matrix, secure SQLite database auth, and link tag management)
     GROUP BY os
     ORDER BY count DESC
     LIMIT 5
@@ -606,8 +649,12 @@ export function getAnalyticsOverview(linkId?: string) {
   // Referrers
   const referrers = db.prepare(`
     SELECT referrer, COUNT(*) as count
+<<<<<<< HEAD
     FROM click_events
     ${baseWhere}
+=======
+    FROM click_events ${humanWhere}
+>>>>>>> 40f1a20 (feat: implement RBAC user roles matrix, secure SQLite database auth, and link tag management)
     GROUP BY referrer
     ORDER BY count DESC
     LIMIT 6
@@ -665,6 +712,63 @@ function mapLinkRow(r: any): Link {
       color: r.campaign_color,
       workspaceId: r.workspace_id,
       createdAt: r.created_at
-    } : undefined
+    } : undefined,
+    tags: r.tags ? (typeof r.tags === 'string' ? JSON.parse(r.tags) : r.tags) : []
+  };
+}
+
+// ================= USER AUTHENTICATION =================
+
+export function findUserByEmail(email: string): (User & { passwordHash: string }) | null {
+  const db = getDatabase();
+  const row = db.prepare('SELECT id, email, password_hash, name, role, created_at FROM users WHERE LOWER(email) = LOWER(?)').get(email.trim()) as any;
+  if (!row) return null;
+  return {
+    id: row.id,
+    email: row.email,
+    passwordHash: row.password_hash,
+    name: row.name,
+    role: row.role,
+    createdAt: row.created_at
+  };
+}
+
+export function registerUser(email: string, password: string, name?: string): User {
+  const db = getDatabase();
+  const existing = findUserByEmail(email);
+  if (existing) {
+    throw new Error('A user with this email address already exists.');
+  }
+
+  const id = `usr-${crypto.randomBytes(8).toString('hex')}`;
+  const now = new Date().toISOString();
+  const passwordHash = hashPassword(password);
+  const displayName = name?.trim() || email.split('@')[0];
+
+  db.prepare(`
+    INSERT INTO users (id, email, password_hash, name, role, created_at)
+    VALUES (?, ?, ?, ?, 'USER', ?)
+  `).run(id, email.toLowerCase().trim(), passwordHash, displayName, now);
+
+  return {
+    id,
+    email: email.toLowerCase().trim(),
+    name: displayName,
+    role: 'USER',
+    createdAt: now
+  };
+}
+
+export function authenticateUser(email: string, password: string): User | null {
+  const user = findUserByEmail(email);
+  if (!user) return null;
+  const isValid = verifyPassword(password, user.passwordHash);
+  if (!isValid) return null;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    createdAt: user.createdAt
   };
 }
