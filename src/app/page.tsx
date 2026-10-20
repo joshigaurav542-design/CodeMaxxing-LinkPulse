@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Link2, Plus, UploadCloud, BarChart3, ShieldCheck,
   Layers, Zap, Activity, Clock, LogIn, LogOut,
-  Globe, UserCheck, ShieldAlert, AlertCircle, Info, Lock,
+  Globe, ShieldAlert, AlertCircle, Info, Lock,
   Sparkles, ArrowRight
 } from 'lucide-react';
 import LinksTable from '@/components/LinksTable';
@@ -27,9 +27,9 @@ export default function DashboardPage() {
   const [hubs, setHubs] = useState<LinkHub[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // User & RBAC state
+  // User & RBAC state (default to VISITOR on initial mount so session & role are always consistent)
   const [user, setUser] = useState<{ id?: string; email: string; name: string; role?: Role } | null>(null);
-  const [activeRole, setActiveRole] = useState<Role>('ADMIN');
+  const [activeRole, setActiveRole] = useState<Role>('VISITOR');
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [visitorAlert, setVisitorAlert] = useState<string | null>(null);
 
@@ -91,6 +91,7 @@ export default function DashboardPage() {
     setUser(null);
     setActiveRole('VISITOR');
     setActiveTab('hubs');
+    setLinks([]);
     setSelectedAnalyticsLinkId(undefined);
   };
 
@@ -106,7 +107,9 @@ export default function DashboardPage() {
   const handleRoleChange = (newRole: Role) => {
     setActiveRole(newRole);
     if (newRole === 'VISITOR') {
+      localStorage.removeItem('linkpulse_user');
       setUser(null);
+      setLinks([]);
       setActiveTab('hubs');
       setSelectedAnalyticsLinkId(undefined);
     } else if (newRole === 'USER') {
@@ -139,10 +142,12 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      // Role-based links fetching
-      const linksUrl = activeRole === 'USER' && user?.id
+      // Role-based links fetching: ADMIN gets all, USER gets scoped links, VISITOR gets public only
+      const linksUrl = activeRole === 'ADMIN'
+        ? '/api/links?role=ADMIN'
+        : activeRole === 'USER' && user?.id
         ? `/api/links?userId=${user.id}&role=USER`
-        : '/api/links?role=ADMIN';
+        : '/api/links?role=VISITOR';
 
       const hubsUrl = user?.id ? `/api/hubs?userId=${user.id}` : '/api/hubs';
 
@@ -192,7 +197,11 @@ export default function DashboardPage() {
       const res = await fetch(`/api/links/${link.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: !link.isActive })
+        body: JSON.stringify({
+          isActive: !link.isActive,
+          role: activeRole,
+          requestingUserId: user?.id
+        })
       });
       if (res.ok) {
         if (user?.id) {
@@ -216,7 +225,9 @@ export default function DashboardPage() {
     }
 
     try {
-      const res = await fetch(`/api/links/${link.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/links/${link.id}?role=${activeRole}&userId=${user?.id || ''}`, {
+        method: 'DELETE'
+      });
       if (res.ok) {
         if (user?.id) {
           logSupabaseActivity(user.id, 'DELETE_LINK', {
@@ -275,30 +286,6 @@ export default function DashboardPage() {
 
           {/* Action Buttons, RBAC Badge & Theme Switcher */}
           <div className="flex items-center gap-2">
-            {/* User Role Badge (Clickable to open User Roles modal) */}
-            <button
-              type="button"
-              onClick={() => setIsRoleModalOpen(true)}
-              title="Click to view & switch User Roles"
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-2xs ${
-                activeRole === 'ADMIN'
-                  ? 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-500/30'
-                  : activeRole === 'USER'
-                  ? 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-500/30'
-                  : 'bg-sky-50 hover:bg-sky-100 dark:bg-sky-500/10 dark:hover:bg-sky-500/20 text-sky-800 dark:text-sky-300 border-sky-200/80 dark:border-sky-500/30'
-              }`}
-            >
-              {activeRole === 'ADMIN' ? (
-                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              ) : activeRole === 'USER' ? (
-                <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <Globe className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-              )}
-              <span>{activeRole === 'ADMIN' ? 'Admin' : activeRole === 'USER' ? 'User' : 'Visitor'}</span>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal underline ml-0.5">Roles</span>
-            </button>
-
             <ThemeToggle />
 
             <button
@@ -537,10 +524,15 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="text-base font-semibold text-slate-900 dark:text-white truncate">
-              {user ? user.name : 'Visitor'}
+              {activeRole === 'VISITOR' || !user ? 'Guest Visitor' : user.name}
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 capitalize">
-              Role: {activeRole.toLowerCase()}
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 capitalize flex items-center gap-1.5">
+              <span>Role: {activeRole.toLowerCase()}</span>
+              {activeRole === 'VISITOR' && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300 font-semibold">
+                  View Only
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -766,6 +758,7 @@ export default function DashboardPage() {
         initialHubId={selectedHubIdForCreate}
         onLinkCreated={handleLinkCreated}
         userId={user?.id}
+        userRole={activeRole}
       />
 
       <CsvBulkUploadModal

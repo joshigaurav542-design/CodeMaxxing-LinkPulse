@@ -13,7 +13,17 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const role = req.headers.get('x-user-role') || req.nextUrl.searchParams.get('role');
     const body = await req.json();
+    const effectiveRole = role || body.role;
+
+    if (effectiveRole !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Only administrators can modify domain governance policies.' },
+        { status: 403 }
+      );
+    }
+
     const { domain, reason } = body;
 
     if (!domain || domain.trim() === '') {
@@ -35,6 +45,15 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const role = searchParams.get('role') || req.headers.get('x-user-role');
+
+    if (role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Only administrators can delete domain governance policies.' },
+        { status: 403 }
+      );
+    }
+
     const id = searchParams.get('id');
     const domain = searchParams.get('domain');
 

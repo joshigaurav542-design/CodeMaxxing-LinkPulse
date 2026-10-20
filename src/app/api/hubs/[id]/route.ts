@@ -15,6 +15,14 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Link Hub not found.' }, { status: 404 });
     }
 
+    // Server-side privacy enforcement: Visitors cannot view private link hubs
+    if (!hub.isPublic && hub.currentUserRole === 'VISITOR') {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: This link hub is private. Please sign in or request access to view.' },
+        { status: 403 }
+      );
+    }
+
     const links = getHubLinks(hub.id);
     const members = getHubMembers(hub.id);
 

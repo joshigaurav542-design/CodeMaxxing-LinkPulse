@@ -9,9 +9,10 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get('userId') || undefined;
     const role = searchParams.get('role');
 
-    if (role === 'VISITOR') {
+    // Server-side RBAC enforcement: Visitors or unauthenticated callers cannot access analytics
+    if (!role || role === 'VISITOR') {
       return NextResponse.json(
-        { success: false, error: 'Visitors do not have access to analytics. Please sign in.' },
+        { success: false, error: 'Forbidden: Visitors do not have access to analytics. Please sign in as User or Admin.' },
         { status: 403 }
       );
     }

@@ -11,11 +11,28 @@ export async function GET(req: NextRequest) {
     const tag = searchParams.get('tag')?.toLowerCase();
     const search = searchParams.get('search')?.toLowerCase();
     const userId = searchParams.get('userId');
-    const role = searchParams.get('role');
+    const role = (searchParams.get('role') || 'VISITOR') as 'VISITOR' | 'USER' | 'ADMIN';
 
-    // Role-based visibility: 'USER' views own links only; 'ADMIN' views all links
-    const scopeUserId = role === 'USER' && userId ? userId : undefined;
-    let links = getAllLinks(scopeUserId, hubId || undefined);
+    // Role-based visibility enforcement on the server:
+    // - 'ADMIN': Platform-wide access to all links
+    // - 'USER': Access to own links
+    // - 'VISITOR': Only public, non-password-protected, active, unbanned links from public hubs
+    let links = getAllLinks(
+      role === 'USER' && userId ? userId : undefined,
+      hubId || undefined
+    );
+
+    if (role === 'VISITOR' || (!role && !userId)) {
+      links = links.filter((l) => {
+        // Hide password-protected links from visitors
+        if (l.hasPassword || l.passwordHash) return false;
+        // Hide inactive or banned links from visitors
+        if (!l.isActive || l.isBanned) return false;
+        // Hide links belonging to private hubs from visitors
+        if (l.hub && !l.hub.isPublic) return false;
+        return true;
+      });
+    }
 
     if (campaignId) {
       links = links.filter((l) => l.campaignId === campaignId);
@@ -49,7 +66,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { destinationUrl, customAlias, title, password, expiresAt, clickLimit, deviceRules, campaignId, hubId, createdById, tags } = body;
+    const { destinationUrl, customAlias, title, password, expiresAt, clickLimit, deviceRules, campaignId, hubId, createdById, tags, role } = body;
+
+    // Server-side RBAC enforcement: Visitors cannot create links
+    if (role === 'VISITOR' || !createdById || createdById === 'usr-visitor-guest') {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Visitors do not have permission to create links. Please sign in as User or Admin.' },
+        { status: 403 }
+      );
+    }
 
     // 1. WHATWG URL Standard Validation
     if (!destinationUrl || !isValidUrl(destinationUrl)) {

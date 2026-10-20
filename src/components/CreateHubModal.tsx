@@ -20,7 +20,8 @@ const CATEGORIES = [
   'Developer Tools',
   'Product Launches',
   'Community & Social',
-  'Design & Creative'
+  'Design & Creative',
+  'Other'
 ];
 
 const THEME_COLORS = [
