@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         const newUser = registerUser(email, password, name);
         return NextResponse.json({
           success: true,
-          message: 'Account created successfully.',
+          message: 'Account created successfully! You can now log in.',
           user: newUser
         });
       } catch (err: any) {
@@ -43,11 +43,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Default: login
+    // Default: login - verify email and password against database
+    const existing = findUserByEmail(email);
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: 'No account found with this email address. Please switch to Register to create an account.' },
+        { status: 404 }
+      );
+    }
+
     const user = authenticateUser(email, password);
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'Invalid email or password.' },
+        { success: false, error: 'Incorrect password. Please verify your credentials and try again.' },
         { status: 401 }
       );
     }

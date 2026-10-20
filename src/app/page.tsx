@@ -18,6 +18,7 @@ import ActivityView from '@/components/ActivityView';
 import ThemeToggle from '@/components/ThemeToggle';
 import UserRoleModal from '@/components/UserRoleModal';
 import { Link, Campaign, Role, LinkHub } from '@/lib/types';
+import { logSupabaseActivity } from '@/lib/supabaseClient';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'hubs' | 'links' | 'analytics' | 'activity' | 'governance'>('hubs');
@@ -42,11 +43,26 @@ export default function DashboardPage() {
   // Check stored user session on mount
   useEffect(() => {
     try {
+      const supabaseRaw = localStorage.getItem('linkpulse_supabase_user');
       const raw = localStorage.getItem('linkpulse_user');
-      if (raw) {
+
+      if (supabaseRaw) {
+        const su = JSON.parse(supabaseRaw);
+        setUser({
+          id: su.id,
+          name: su.name || su.email.split('@')[0],
+          email: su.email,
+          role: 'USER'
+        });
+        setActiveRole('USER');
+        logSupabaseActivity(su.id, 'PAGE_VIEW', { path: '/', source: 'supabase_session' });
+      } else if (raw) {
         const u = JSON.parse(raw);
         setUser(u);
         setActiveRole(u.role || 'USER');
+        if (u.id) {
+          logSupabaseActivity(u.id, 'PAGE_VIEW', { path: '/', source: 'local_session' });
+        }
       } else {
         // Default to Gaurav Joshi (Admin) for seamless paired experience, or allow switching
         const defaultAdmin = {
@@ -67,6 +83,10 @@ export default function DashboardPage() {
   }, []);
 
   const handleSignOut = () => {
+    if (user?.id) {
+      logSupabaseActivity(user.id, 'USER_LOGOUT', { email: user.email });
+    }
+    localStorage.removeItem('linkpulse_supabase_user');
     localStorage.removeItem('linkpulse_user');
     setUser(null);
     setActiveRole('VISITOR');
@@ -151,6 +171,14 @@ export default function DashboardPage() {
 
   const handleLinkCreated = (newLink: Link) => {
     setLinks((prev) => [newLink, ...prev]);
+    if (user?.id) {
+      logSupabaseActivity(user.id, 'CREATE_LINK', {
+        linkId: newLink.id,
+        shortCode: newLink.shortCode,
+        destinationUrl: newLink.destinationUrl,
+        hubId: newLink.hubId || null
+      });
+    }
     fetchData();
   };
 
@@ -167,6 +195,13 @@ export default function DashboardPage() {
         body: JSON.stringify({ isActive: !link.isActive })
       });
       if (res.ok) {
+        if (user?.id) {
+          logSupabaseActivity(user.id, 'TOGGLE_LINK_STATUS', {
+            linkId: link.id,
+            shortCode: link.shortCode,
+            newActiveStatus: !link.isActive
+          });
+        }
         fetchData();
       }
     } catch (e) {
@@ -183,6 +218,12 @@ export default function DashboardPage() {
     try {
       const res = await fetch(`/api/links/${link.id}`, { method: 'DELETE' });
       if (res.ok) {
+        if (user?.id) {
+          logSupabaseActivity(user.id, 'DELETE_LINK', {
+            linkId: link.id,
+            shortCode: link.shortCode
+          });
+        }
         fetchData();
       }
     } catch (e) {

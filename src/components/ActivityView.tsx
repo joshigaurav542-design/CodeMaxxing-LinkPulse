@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Activity, Layers, Link2, Sparkles, UserCheck, ShieldCheck,
-  Trash2, Eye, RefreshCw, Clock, Filter, CheckCircle2, Zap
+  Trash2, Eye, RefreshCw, Clock, Filter, CheckCircle2, Zap, Database
 } from 'lucide-react';
 import { UserActivity, ActivityActionType } from '@/lib/types';
+import { fetchSupabaseUserActivities } from '@/lib/supabaseClient';
 
 interface ActivityViewProps {
   currentUser: { id?: string; email: string; name: string } | null;
@@ -14,18 +15,47 @@ interface ActivityViewProps {
 export default function ActivityView({ currentUser }: ActivityViewProps) {
   const [activities, setActivities] = useState<UserActivity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'hubs' | 'links' | 'access'>('all');
+  const [filter, setFilter] = useState<'all' | 'hubs' | 'links' | 'access' | 'supabase'>('all');
   const [search, setSearch] = useState('');
 
   const fetchActivities = async () => {
     setLoading(true);
     try {
       const url = currentUser?.id ? `/api/activity?userId=${currentUser.id}` : '/api/activity';
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.success) {
-        setActivities(data.activities || []);
-      }
+      const [res, supabaseLogs] = await Promise.all([
+        fetch(url).then((r) => r.json()).catch(() => ({ success: false, activities: [] })),
+        currentUser?.id ? fetchSupabaseUserActivities(currentUser.id, 30) : Promise.resolve([])
+      ]);
+
+      const localList: UserActivity[] = res.success ? res.activities || [] : [];
+
+      // Map Supabase logs to UserActivity format
+      const supabaseMapped: UserActivity[] = supabaseLogs.map((log) => ({
+        id: `sb-${log.id}`,
+        userId: log.user_id,
+        userName: currentUser?.name || 'Identified User',
+        actionType: (log.action as ActivityActionType) || 'PAGE_VIEW',
+        title: log.action.replace(/_/g, ' '),
+        description: log.metadata?.page || log.metadata?.path || log.metadata?.url
+          ? `Event on ${log.metadata.page || log.metadata.path || log.metadata.url}`
+          : `Supabase logged: ${log.action}`,
+        createdAt: log.timestamp
+      }));
+
+      // Combine and sort chronologically
+      const combined = [...localList, ...supabaseMapped].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      // Deduplicate by ID
+      const seen = new Set<string>();
+      const deduplicated = combined.filter((item) => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
+
+      setActivities(deduplicated);
     } catch (e) {
       console.error('Error fetching activities', e);
     } finally {
@@ -123,6 +153,8 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       if (act.actionType !== 'ADD_LINK' && act.actionType !== 'DELETE_LINK' && act.actionType !== 'TOGGLE_LINK') return false;
     } else if (filter === 'access') {
       if (act.actionType !== 'JOIN_HUB') return false;
+    } else if (filter === 'supabase') {
+      if (!act.id.startsWith('sb-')) return false;
     }
 
     if (!search.trim()) return true;
@@ -140,12 +172,16 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
               Your Activity Log
             </h2>
             <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-500/30">
               {activities.length} Recorded Actions
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-500/30 flex items-center gap-1">
+              <Database className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+              <span>Supabase Synced</span>
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -174,6 +210,18 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
             }`}
           >
             All Actions ({activities.length})
+          </button>
+
+          <button
+            onClick={() => setFilter('supabase')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              filter === 'supabase'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Database className="w-3 h-3 text-emerald-500" />
+            <span>Cloud Logs ({activities.filter((a) => a.id.startsWith('sb-')).length})</span>
           </button>
           <button
             onClick={() => setFilter('hubs')}
