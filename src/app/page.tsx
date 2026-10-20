@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Link2, Plus, UploadCloud, BarChart3, ShieldCheck,
   Layers, Zap, Activity, Clock, LogIn, LogOut,
-  Globe, UserCheck, ShieldAlert, AlertCircle, Info, Lock,
+  Globe, ShieldAlert, AlertCircle, Info, Lock,
   Sparkles, ArrowRight
 } from 'lucide-react';
 import LinksTable from '@/components/LinksTable';
@@ -234,30 +234,6 @@ export default function DashboardPage() {
 
           {/* Action Buttons, RBAC Badge & Theme Switcher */}
           <div className="flex items-center gap-2">
-            {/* User Role Badge (Clickable to open User Roles modal) */}
-            <button
-              type="button"
-              onClick={() => setIsRoleModalOpen(true)}
-              title="Click to view & switch User Roles"
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-2xs ${
-                activeRole === 'ADMIN'
-                  ? 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-500/30'
-                  : activeRole === 'USER'
-                  ? 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-500/30'
-                  : 'bg-sky-50 hover:bg-sky-100 dark:bg-sky-500/10 dark:hover:bg-sky-500/20 text-sky-800 dark:text-sky-300 border-sky-200/80 dark:border-sky-500/30'
-              }`}
-            >
-              {activeRole === 'ADMIN' ? (
-                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              ) : activeRole === 'USER' ? (
-                <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <Globe className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-              )}
-              <span>{activeRole === 'ADMIN' ? 'Admin' : activeRole === 'USER' ? 'User' : 'Visitor'}</span>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal underline ml-0.5">Roles</span>
-            </button>
-
             <ThemeToggle />
 
             <button
